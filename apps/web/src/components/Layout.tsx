@@ -7,7 +7,11 @@ import { Alert, PageLoading } from './ui'
 export function MockBanner() {
   if (!USE_MOCKS) return null
   return (
-    <div className="no-print bg-amber-400 px-3 py-1 text-center text-xs font-bold text-amber-950">
+    <div
+      role="status"
+      data-testid="mock-banner"
+      className="sticky top-0 z-50 border-b border-amber-600 bg-amber-400 px-3 py-1.5 text-center text-xs font-bold text-amber-950"
+    >
       MOCK DATA — fake backend and fake login for UI demo only. Nothing here is real or verifiable.
     </div>
   )
@@ -22,7 +26,7 @@ export function Layout() {
   return (
     <div className="flex min-h-dvh flex-col">
       <MockBanner />
-      <header className="no-print border-b border-slate-200 bg-white">
+      <header className="no-print relative border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <Link to="/" className="text-xl font-extrabold tracking-tight text-brand-700">
             Transly
@@ -35,7 +39,7 @@ export function Layout() {
           >
             ☰
           </button>
-          <nav className={`${open ? 'flex' : 'hidden'} absolute left-0 right-0 top-[52px] z-10 flex-col gap-1 border-b bg-white p-3 sm:static sm:flex sm:flex-row sm:items-center sm:border-0 sm:p-0`} onClick={() => setOpen(false)}>
+          <nav className={`${open ? 'flex' : 'hidden'} absolute left-0 right-0 top-full z-10 flex-col gap-1 border-b bg-white p-3 sm:static sm:flex sm:flex-row sm:items-center sm:border-0 sm:p-0`} onClick={() => setOpen(false)}>
             {user ? (
               <>
                 <NavLink to="/upload" className={link}>New document</NavLink>
