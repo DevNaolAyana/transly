@@ -48,7 +48,7 @@ export function describeError(e: unknown): ErrorInfo {
   }
   if (status === 413) {
     return {
-      message: 'This is too large for the server. Use a smaller file (under 10 MB) or a shorter document.',
+      message: 'This is too large for the server. Use a smaller file (under 8 MB) or a shorter document.',
       detail,
       retryable: false,
     }

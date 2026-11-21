@@ -19,7 +19,12 @@ export const DOC_TYPES: { value: DocType; label: string }[] = [
 
 export const docTypeLabel = (t?: DocType | null) => DOC_TYPES.find((d) => d.value === t)?.label ?? t ?? '—'
 
-export const MAX_FILE_BYTES = 10 * 1024 * 1024 // matches the storage bucket limit
+// What we upload must be under 8 MB (the storage bucket limit is 10 MB; this leaves headroom).
+export const MAX_FILE_BYTES = 8 * 1024 * 1024
+// Photos are shrunk in the browser before upload, so the *input* may be bigger (limited by decode memory).
+export const MAX_IMAGE_INPUT_BYTES = 40 * 1024 * 1024
+export const IMAGE_MAX_SIDE = 2000
+export const IMAGE_JPEG_QUALITY = 0.85
 
 export const BLOCK_TYPE_LABEL: Record<BlockType, string> = {
   heading: 'Heading',
