@@ -25,7 +25,7 @@ export function isNonText(b: Block) {
 }
 
 const textCls =
-  'block w-full min-h-11 resize-y rounded-lg border px-3 py-2 text-base leading-relaxed focus:outline-none focus:ring-2 [field-sizing:content]'
+  'block w-full min-h-11 resize-y whitespace-pre-wrap break-words rounded-lg border px-3 py-2 text-base leading-relaxed focus:outline-none focus:ring-2 [field-sizing:content]'
 
 /** One editable (or read-only) block. */
 export function BlockField({
@@ -65,7 +65,7 @@ export function BlockField({
       {unclear && (
         <p className="mt-1 text-sm text-amber-900">
           <span className="font-semibold">Needs your attention: </span>
-          <Highlighted text={block.text} />
+          <span className="whitespace-pre-wrap break-words"><Highlighted text={block.text} /></span>
         </p>
       )}
     </div>

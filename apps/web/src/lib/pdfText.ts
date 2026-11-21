@@ -113,7 +113,10 @@ export function drawLine(
   return cx - x
 }
 
-/** Greedy word-wrap into lines no wider than maxWidth. Splits very long words by character. */
+/**
+ * Greedy word-wrap into lines no wider than maxWidth. Splits very long words by character.
+ * Every "\n" in the text starts a new line (each line is wrapped separately); blank lines are kept.
+ */
 export function wrapText(text: string, maxWidth: number, size: number, fonts: PdfFonts, bold = false): string[] {
   const out: string[] = []
   for (const para of text.split(/\r?\n/)) {
@@ -146,6 +149,8 @@ export function wrapText(text: string, maxWidth: number, size: number, fonts: Pd
     }
     if (line) push()
   }
+  // a trailing "\n" must not add an empty line at the end of a block
+  while (out.length > 1 && out[out.length - 1] === '') out.pop()
   return out
 }
 
