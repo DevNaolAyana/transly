@@ -12,6 +12,8 @@ import type {
   LangCode,
   ReserveRequest,
   ReserveResponse,
+  ReviewRequestResponse,
+  RevokeResponse,
   Role,
   TranslateResponse,
   VerifyResponse,
@@ -45,12 +47,10 @@ export interface Api {
   reserveIssue(p: ReserveRequest): Promise<ReserveResponse>
   completeIssue(p: { verificationId: string; pdfBase64: string }): Promise<CompleteResponse>
   verify(verificationId: string): Promise<VerifyResponse>
-  /**
-   * NOT IN shared/contract.ts yet: moves a document to status 'in_review' and
-   * stores the user's edited blocks. Needs a backend endpoint (proposed:
-   * POST /api/review/request { documentId, blocksOriginal, blocksTranslated }).
-   */
-  requestHumanReview(p: { documentId: string; blocksOriginal: Block[]; blocksTranslated: Block[] }): Promise<void>
+  /** POST /api/review/request { documentId } -> { status: 'in_review' } */
+  requestHumanReview(documentId: string): Promise<ReviewRequestResponse>
+  /** POST /api/issue/revoke { verificationId } -> { result: 'revoked' } (owner only; the API enforces it) */
+  revokeDocument(verificationId: string): Promise<RevokeResponse>
 }
 
 // ---------------------------------------------------------------------------
@@ -88,12 +88,16 @@ async function request<T>(
     /* non-JSON body */
   }
   if (!res.ok && !acceptStatuses.includes(res.status)) {
+    // Backend format: { error: { code, message } }. Also tolerate { error: "text" } / { message }.
     const o = json as { error?: unknown; message?: unknown } | null
+    const eo = o?.error && typeof o.error === 'object' ? (o.error as { code?: unknown; message?: unknown }) : null
+    const code = typeof eo?.code === 'string' ? eo.code : undefined
     const msg =
+      (typeof eo?.message === 'string' && eo.message) ||
       (typeof o?.error === 'string' && o.error) ||
       (typeof o?.message === 'string' && o.message) ||
       `Request failed (HTTP ${res.status})`
-    throw new ApiError(msg, res.status)
+    throw new ApiError(msg, res.status, code)
   }
   if (json === null) throw new ApiError(`Server returned an empty or invalid response (HTTP ${res.status}).`, res.status)
   return json as T
@@ -219,10 +223,16 @@ const realApi: Api = {
     return r
   },
 
-  async requestHumanReview() {
-    throw new ApiError(
-      'Human review is not available yet: the backend has no endpoint for it (needs a contract addition).',
-    )
+  async requestHumanReview(documentId) {
+    const r = await request<ReviewRequestResponse>('POST', '/api/review/request', { body: { documentId } })
+    if (r?.status !== 'in_review') throw new ApiError('The server did not confirm that the document is in review.')
+    return r
+  },
+
+  async revokeDocument(verificationId) {
+    const r = await request<RevokeResponse>('POST', '/api/issue/revoke', { body: { verificationId } })
+    if (r?.result !== 'revoked') throw new ApiError('The server did not confirm the revocation.')
+    return r
   },
 }
 

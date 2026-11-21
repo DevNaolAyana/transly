@@ -3,10 +3,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Alert, Button, Card, PageLoading, StepBar } from '../components/ui'
 import { SideBySide } from '../components/SideBySide'
 import { IssuePanel } from '../components/IssuePanel'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { checkTranslated, loadDraft, sameBlocks, saveDraft } from '../lib/draft'
 import { langLabel } from '../lib/constants'
 import { api } from '../services/api'
-import { errMsg } from '../services/errors'
 import type { Block, DocumentRecord } from '../types'
 
 type Phase = 'loading' | 'translating' | 'ready' | 'error'
@@ -18,9 +18,9 @@ export default function Translate() {
   const [original, setOriginal] = useState<Block[]>([])
   const [translated, setTranslated] = useState<Block[]>([])
   const [phase, setPhase] = useState<Phase>('loading')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<unknown>(null)
   const [reviewBusy, setReviewBusy] = useState(false)
-  const [reviewError, setReviewError] = useState<string | null>(null)
+  const [reviewError, setReviewError] = useState<unknown>(null)
 
   const translateNow = useCallback(
     async (d: DocumentRecord, src: Block[]) => {
@@ -39,7 +39,7 @@ export default function Translate() {
         saveDraft(id, { translated: res.blocks, translatedSource: src })
         setPhase('ready')
       } catch (e) {
-        setError(errMsg(e))
+        setError(e)
         setPhase('error')
       }
     },
@@ -69,7 +69,7 @@ export default function Translate() {
         await translateNow(d, src)
       }
     } catch (e) {
-      setError(errMsg(e))
+      setError(e)
       setPhase('error')
     }
   }, [id, nav, translateNow])
@@ -90,10 +90,10 @@ export default function Translate() {
     setReviewBusy(true)
     setReviewError(null)
     try {
-      await api.requestHumanReview({ documentId: id, blocksOriginal: original, blocksTranslated: translated })
+      await api.requestHumanReview(id)
       nav('/documents')
     } catch (e) {
-      setReviewError(errMsg(e))
+      setReviewError(e)
       setReviewBusy(false)
     }
   }
@@ -111,18 +111,9 @@ export default function Translate() {
     return (
       <div className="mx-auto max-w-2xl space-y-3">
         <StepBar step={3} />
-        <Alert
-          tone="error"
-          title="Translation failed"
-          action={
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={() => void init()}>Try again</Button>
-              <Link to={`/documents/${id}/review`} className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold">Back to the text</Link>
-            </div>
-          }
-        >
-          {error}
-        </Alert>
+        <ErrorNotice title="Translation failed" error={error} onRetry={() => void init()}>
+          <Link to={`/documents/${id}/review`} className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold">Back to the text</Link>
+        </ErrorNotice>
       </div>
     )
   }
@@ -179,9 +170,16 @@ export default function Translate() {
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <Card>
           <h2 className="font-bold">Option: human review</h2>
-          <p className="mb-3 mt-1 text-sm text-slate-600">A human translator checks the translation and issues the final PDF with their name on it.</p>
-          {reviewError && <div className="mb-3"><Alert tone="error" title="Could not send for review">{reviewError}</Alert></div>}
-          <Button variant="secondary" loading={reviewBusy} onClick={() => void sendForReview()}>Send to a human translator</Button>
+          <p className="mt-1 text-sm text-slate-600">A human translator checks the translation and issues the final PDF with their name on it.</p>
+          <p className="mb-3 mt-1 text-xs text-amber-800">
+            The translator reviews the translation saved on the server. Edits you made in this browser are not sent.
+          </p>
+          {reviewError != null && (
+            <div className="mb-3">
+              <ErrorNotice title="Could not send for review" error={reviewError} onRetry={() => void sendForReview()} />
+            </div>
+          )}
+          <Button variant="secondary" loading={reviewBusy} onClick={() => void sendForReview()}>Send to human translator</Button>
         </Card>
         <Card>
           <h2 className="font-bold">Payment</h2>

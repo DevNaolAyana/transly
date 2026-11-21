@@ -25,6 +25,12 @@ export interface CompleteResponse {
   status: 'issued'
   sha256: string
 }
+export interface ReviewRequestResponse {
+  status: 'in_review'
+}
+export interface RevokeResponse {
+  result: 'revoked'
+}
 export type VerifyResult = 'valid' | 'revoked' | 'not_found'
 export interface VerifyResponse {
   result: VerifyResult

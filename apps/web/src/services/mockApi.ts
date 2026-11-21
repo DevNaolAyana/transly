@@ -5,9 +5,38 @@ import type { Block, DocumentRecord, Role, VerifyResponse } from '../types'
 /**
  * MOCK backend (VITE_USE_MOCKS=true). Everything here is fake sample data kept in
  * localStorage so the UI can be built and demoed before the real API exists.
- * Tip: upload a file whose name contains "fail-extract" or "fail-translate" to
- * exercise the error/retry states.
+ *
+ * Failure triggers: upload a file whose name contains "<kind>-<stage>", e.g.
+ * "rate-extract.png". Stages: extract, translate, reserve, complete.
+ * Kinds: fail (503, fails once), rate (429 RATE_LIMITED, fails once), down (500, always),
+ * lang (422 UNSUPPORTED_LANGUAGE), auth (401), big (413), bad (422).
+ * Verify triggers: id "revoked-demo" -> revoked, id "missing-demo" -> not_found.
  */
+
+const FAILURES: Record<string, { status: number; code: string; msg: string; once?: boolean }> = {
+  fail: { status: 503, code: 'INTERNAL', msg: 'Mock server failure', once: true },
+  rate: { status: 429, code: 'RATE_LIMITED', msg: 'Mock rate limit', once: true },
+  down: { status: 500, code: 'INTERNAL', msg: 'Mock server is down' },
+  lang: { status: 422, code: 'UNSUPPORTED_LANGUAGE', msg: 'Mock unsupported language' },
+  auth: { status: 401, code: 'UNAUTHORIZED', msg: 'Mock invalid token' },
+  big: { status: 413, code: 'PAYLOAD_TOO_LARGE', msg: 'Mock payload too large' },
+  bad: { status: 422, code: 'UNPROCESSABLE', msg: 'Mock: the document could not be processed' },
+}
+const failedOnce = new Set<string>()
+
+type Stage = 'extract' | 'translate' | 'reserve' | 'complete'
+function maybeFail(doc: DocumentRecord | undefined, stage: Stage) {
+  if (!doc) return
+  for (const [kind, f] of Object.entries(FAILURES)) {
+    if (!doc.storagePath.includes(`${kind}-${stage}`)) continue
+    const key = `${doc.id}:${stage}:${kind}`
+    if (f.once) {
+      if (failedOnce.has(key)) return // second attempt succeeds
+      failedOnce.add(key)
+    }
+    throw new ApiError(f.msg, f.status, f.code)
+  }
+}
 
 const KEY = 'transly.mock.db.v1'
 
@@ -168,7 +197,7 @@ export const mockApi: Api = {
     const db = load()
     const d = db.docs[documentId]
     if (!d) throw new ApiError('Document not found (mock).', 404)
-    if (d.storagePath.includes('fail-extract')) throw new ApiError('Mock extraction failure (file name contains "fail-extract").', 502)
+    maybeFail(d, 'extract')
     const lang = sourceLanguage ?? d.sourceLang
     const blocks = lang === 'en' ? SAMPLE_EN : SAMPLE_AM
     d.blocksOriginal = blocks
@@ -182,7 +211,7 @@ export const mockApi: Api = {
     const db = load()
     const d = db.docs[documentId]
     if (!d) throw new ApiError('Document not found (mock).', 404)
-    if (d.storagePath.includes('fail-translate')) throw new ApiError('Mock translation failure (file name contains "fail-translate").', 502)
+    maybeFail(d, 'translate')
     const out: Block[] = blocks.map((b) =>
       ['stamp', 'signature', 'logo', 'handwriting'].includes(b.type) || !b.text.trim()
         ? { ...b }
@@ -195,15 +224,33 @@ export const mockApi: Api = {
     return { blocks: out }
   },
 
-  async requestHumanReview({ documentId, blocksOriginal, blocksTranslated }) {
+  async requestHumanReview(documentId) {
     await wait(500)
     const db = load()
     const d = db.docs[documentId]
     if (!d) throw new ApiError('Document not found (mock).', 404)
-    d.blocksOriginal = blocksOriginal
-    d.blocksTranslated = blocksTranslated
+    if (d.ownerId !== mockCurrentUserId()) throw new ApiError('Only the owner can request a review (mock).', 403, 'FORBIDDEN')
+    if (!d.blocksTranslated) throw new ApiError('Translate the document before requesting a review (mock).', 422, 'NOT_TRANSLATED')
+    // Like the real endpoint (body is only { documentId }): the status changes, the stored blocks are NOT replaced
+    // by any edits the user made in the browser.
     d.status = 'in_review'
     save(db)
+    return { status: 'in_review' }
+  },
+
+  async revokeDocument(verificationId) {
+    await wait(500)
+    const db = load()
+    const rec = db.issued[verificationId]
+    if (!rec || rec.status === 'reserved') throw new ApiError('No issued document with this verification ID (mock).', 404, 'NOT_FOUND')
+    const d = db.docs[rec.documentId]
+    if (!d || d.ownerId !== mockCurrentUserId()) {
+      throw new ApiError('Only the owner of the document can revoke it (mock).', 403, 'FORBIDDEN')
+    }
+    if (rec.status === 'revoked') throw new ApiError('This document is already revoked (mock).', 409, 'ALREADY_REVOKED')
+    rec.status = 'revoked'
+    save(db)
+    return { result: 'revoked' }
   },
 
   async reserveIssue(p) {
@@ -211,6 +258,7 @@ export const mockApi: Api = {
     const db = load()
     const d = db.docs[p.documentId]
     if (!d) throw new ApiError('Document not found (mock).', 404)
+    maybeFail(d, 'reserve')
     const verificationId = hex(16)
     db.issued[verificationId] = {
       verificationId,
@@ -229,6 +277,8 @@ export const mockApi: Api = {
     const db = load()
     const rec = db.issued[verificationId]
     if (!rec) throw new ApiError('Unknown verification id (mock).', 404)
+    maybeFail(db.docs[rec.documentId], 'complete')
+    if (pdfBase64.length > 4_500_000) throw new ApiError('Mock: request body too large (Vercel limit ~4.5 MB).', 413, 'PAYLOAD_TOO_LARGE')
     const bytes = Uint8Array.from(atob(pdfBase64), (c) => c.charCodeAt(0))
     const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))
     rec.sha256 = Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('')
@@ -243,6 +293,20 @@ export const mockApi: Api = {
 
   async verify(verificationId): Promise<VerifyResponse> {
     await wait(400)
+    // Demo triggers so the Revoked / Not found screens can be shown without issuing anything.
+    if (verificationId === 'revoked-demo') {
+      return {
+        result: 'revoked',
+        issuerName: 'Demo Issuer (mock)',
+        issuedAt: new Date(Date.now() - 5 * 86_400_000).toISOString(),
+        sourceLanguage: 'am',
+        targetLanguage: 'en',
+        documentType: 'academic',
+        reviewStatus: 'machine',
+        isPublic: false,
+      }
+    }
+    if (verificationId === 'missing-demo') return { result: 'not_found' }
     const db = load()
     const rec = db.issued[verificationId]
     if (!rec || rec.status === 'reserved') return { result: 'not_found' }

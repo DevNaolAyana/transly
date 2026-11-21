@@ -91,6 +91,25 @@ export async function issueDocument(p: IssueParams, onStage?: (s: IssueStage) =>
 // Issued PDFs are kept in memory so the "done" page can offer download/print.
 // (Not persisted: after a reload, a public PDF is re-fetched via the verify API's pdfUrl.)
 const issuedPdfs = new Map<string, { pdf: Uint8Array; documentId: string }>()
-export const rememberIssued = (verificationId: string, pdf: Uint8Array, documentId: string) =>
+const MAP_KEY = 'transly.issuedDocs'
+
+function readMap(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(MAP_KEY) ?? '{}') as Record<string, string>
+  } catch {
+    return {}
+  }
+}
+
+/** Remember which document a verification id belongs to (ids only, no content), so the issued page survives a reload. */
+export function rememberIssued(verificationId: string, pdf: Uint8Array, documentId: string) {
   issuedPdfs.set(verificationId, { pdf, documentId })
+  try {
+    localStorage.setItem(MAP_KEY, JSON.stringify({ ...readMap(), [verificationId]: documentId }))
+  } catch {
+    /* storage unavailable: revoke button just won't be offered after a reload */
+  }
+}
 export const getIssued = (verificationId: string) => issuedPdfs.get(verificationId)
+export const getIssuedDocumentId = (verificationId: string): string | undefined =>
+  issuedPdfs.get(verificationId)?.documentId ?? readMap()[verificationId]
