@@ -1,7 +1,7 @@
 import { requireSupabase } from '../lib/supabase'
 import { USE_MOCKS } from '../lib/constants'
 import { mockApi } from './mockApi'
-import { ApiError } from './errors'
+import { ApiError, clientTimeoutMs, timeoutError } from './errors'
 import type {
   ApiError as ApiErrorBody,
   Block,
@@ -74,13 +74,21 @@ async function request<T>(
   const headers: Record<string, string> = {}
   if (auth) Object.assign(headers, await authHeader())
   if (body !== undefined) headers['Content-Type'] = 'application/json'
+  // Extract / translate can take 30-90 s, so wait up to 120 s, then stop with a clear, retryable error.
+  const ms = clientTimeoutMs()
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), ms)
   let res: Response
+  let text: string
   try {
-    res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
+    res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: ctrl.signal })
+    text = await res.text()
   } catch {
+    if (ctrl.signal.aborted) throw timeoutError(ms)
     throw new ApiError('Could not reach the server. Check your connection and try again.')
+  } finally {
+    clearTimeout(timer)
   }
-  const text = await res.text()
   let json: unknown = null
   try {
     json = text ? JSON.parse(text) : null

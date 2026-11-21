@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Alert, Button, Card, PageLoading, StepBar } from '../components/ui'
 import { ErrorNotice } from '../components/ErrorNotice'
+import { LongWait } from '../components/LongWait'
 import { BlockField, hasUnclear, isNonText } from '../components/BlockEditor'
 import { BLOCK_TYPE_LABEL, docTypeLabel, langLabel } from '../lib/constants'
 import { loadDraft, saveDraft } from '../lib/draft'
@@ -21,7 +22,7 @@ export default function Review() {
   const [detected, setDetected] = useState<ExtractResponse | null>(null)
   const [fileUrl, setFileUrl] = useState<string | null>(null)
 
-  const run = useCallback(async () => {
+  const runOnce = useCallback(async () => {
     setPhase('loading')
     setError(null)
     try {
@@ -50,6 +51,13 @@ export default function Review() {
     }
   }, [id])
 
+  // Never run the (slow, billable) extract twice at once: a second trigger joins the first.
+  const inFlight = useRef<Promise<void> | null>(null)
+  const run = useCallback(() => {
+    if (!inFlight.current) inFlight.current = runOnce().finally(() => { inFlight.current = null })
+    return inFlight.current
+  }, [runOnce])
+
   useEffect(() => {
     void run()
   }, [run])
@@ -75,7 +83,7 @@ export default function Review() {
     return (
       <div className="mx-auto max-w-2xl">
         <StepBar step={2} />
-        <PageLoading label="Reading the text in your document… this can take up to a minute." />
+        <LongWait message="Reading your document. This can take up to a minute." />
       </div>
     )
   }

@@ -1,5 +1,5 @@
 import type { Api } from './api'
-import { ApiError } from './errors'
+import { ApiError, withTimeout } from './errors'
 import type { ApiError as ApiErrorBody, Block, VerifyResponse } from '@shared/contract'
 import type { DocumentRecord, Role } from '../types'
 
@@ -11,6 +11,8 @@ import type { DocumentRecord, Role } from '../types'
  * "rate-extract.png". Stages: extract, translate, reserve, complete.
  * Kinds: fail (503, fails once), rate (429 RATE_LIMITED, fails once), down (500, always),
  * lang (422 UNSUPPORTED_LANGUAGE), auth (401), big (413), bad (422).
+ * Slow triggers (extract and translate): file name containing "slow" waits 8 s; containing "hang" never answers,
+ * so the client timeout (120 s, or localStorage 'transly.mock.timeoutMs' in mock mode) shows its Retry message.
  * Verify triggers: id "revoked-demo" -> revoked, id "missing-demo" -> not_found.
  */
 
@@ -41,6 +43,13 @@ function maybeFail(doc: DocumentRecord | undefined, stage: Stage) {
     }
     throw new ApiError(f.msg, f.status, f.code)
   }
+}
+
+/** "slow" in the file name: extract and translate wait 8 s. "hang": they never answer (shows the client timeout). */
+async function slowTrigger(doc: DocumentRecord) {
+  const name = doc.storagePath.toLowerCase()
+  if (name.includes('hang')) await new Promise(() => {})
+  if (name.includes('slow')) await wait(8000)
 }
 
 const KEY = 'transly.mock.db.v1'
@@ -203,6 +212,7 @@ export const mockApi: Api = {
     const d = db.docs[documentId]
     if (!d) throw new ApiError('Document not found (mock).', 404, 'NOT_FOUND')
     maybeFail(d, 'extract')
+    await slowTrigger(d)
     const lang = sourceLanguage ?? d.sourceLang
     const blocks = lang === 'en' ? SAMPLE_EN : SAMPLE_AM
     d.blocksOriginal = blocks
@@ -217,6 +227,7 @@ export const mockApi: Api = {
     const d = db.docs[documentId]
     if (!d) throw new ApiError('Document not found (mock).', 404, 'NOT_FOUND')
     maybeFail(d, 'translate')
+    await slowTrigger(d)
     const out: Block[] = blocks.map((b) =>
       ['stamp', 'signature', 'logo', 'handwriting'].includes(b.type) || !b.text.trim()
         ? { ...b }
@@ -332,3 +343,9 @@ export const mockApi: Api = {
     }
   },
 }
+
+// Same client timeout as the real API (whose fetch is aborted), so a "hang" file shows the timeout message.
+const rawExtract = mockApi.extract
+mockApi.extract = (...a: Parameters<Api['extract']>) => withTimeout(rawExtract(...a))
+const rawTranslate = mockApi.translate
+mockApi.translate = (...a: Parameters<Api['translate']>) => withTimeout(rawTranslate(...a))

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Alert, Button, Card, PageLoading, StepBar } from '../components/ui'
 import { SideBySide } from '../components/SideBySide'
 import { IssuePanel } from '../components/IssuePanel'
 import { ErrorNotice } from '../components/ErrorNotice'
+import { LongWait } from '../components/LongWait'
 import { checkTranslated, loadDraft, sameBlocks, saveDraft } from '../lib/draft'
 import { langLabel } from '../lib/constants'
 import { api } from '../services/api'
@@ -23,8 +24,12 @@ export default function Translate() {
   const [reviewBusy, setReviewBusy] = useState(false)
   const [reviewError, setReviewError] = useState<unknown>(null)
 
+  // Never run the (slow, billable) translate twice at once.
+  const translating = useRef(false)
   const translateNow = useCallback(
     async (d: DocumentRecord, src: Block[]) => {
+      if (translating.current) return
+      translating.current = true
       setPhase('translating')
       setError(null)
       try {
@@ -42,12 +47,14 @@ export default function Translate() {
       } catch (e) {
         setError(e)
         setPhase('error')
+      } finally {
+        translating.current = false
       }
     },
     [id],
   )
 
-  const init = useCallback(async () => {
+  const initOnce = useCallback(async () => {
     setPhase('loading')
     setError(null)
     try {
@@ -74,6 +81,12 @@ export default function Translate() {
       setPhase('error')
     }
   }, [id, nav, translateNow])
+
+  const initInFlight = useRef<Promise<void> | null>(null)
+  const init = useCallback(() => {
+    if (!initInFlight.current) initInFlight.current = initOnce().finally(() => { initInFlight.current = null })
+    return initInFlight.current
+  }, [initOnce])
 
   useEffect(() => {
     void init()
@@ -104,7 +117,7 @@ export default function Translate() {
     return (
       <div className="mx-auto max-w-2xl">
         <StepBar step={3} />
-        <PageLoading label="Translating… this can take up to a minute." />
+        <LongWait message="Translating your document. This can take up to a minute." />
       </div>
     )
   }

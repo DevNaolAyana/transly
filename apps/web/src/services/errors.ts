@@ -1,3 +1,5 @@
+import { USE_MOCKS } from '../lib/constants'
+
 export class ApiError extends Error {
   status: number
   /** Backend error code from { error: { code, message } }, e.g. RATE_LIMITED. */
@@ -11,6 +13,40 @@ export class ApiError extends Error {
 }
 
 export const errMsg = (e: unknown): string => (e instanceof Error ? e.message : String(e))
+
+/** Extract and translate can take 30 to 90 s, so the client waits up to 120 s before giving up. */
+export const CLIENT_TIMEOUT_MS = 120_000
+
+/** Mock mode only: lets a test shorten the timeout (localStorage 'transly.mock.timeoutMs'). */
+export function clientTimeoutMs(): number {
+  try {
+    const v = Number(localStorage.getItem('transly.mock.timeoutMs'))
+    if (USE_MOCKS && Number.isFinite(v) && v >= 1000) return v
+  } catch {
+    /* storage unavailable */
+  }
+  return CLIENT_TIMEOUT_MS
+}
+
+export function timeoutError(ms: number): ApiError {
+  const wait = ms >= 60_000 ? `${Math.round(ms / 60_000)} minutes` : `${Math.round(ms / 1000)} seconds`
+  return new ApiError(
+    `This is taking too long (more than ${wait}), so we stopped waiting. Nothing is lost. Please try again.`,
+    0,
+    'CLIENT_TIMEOUT',
+  )
+}
+
+/** Reject with a CLIENT_TIMEOUT ApiError if `p` does not settle in time. */
+export function withTimeout<T>(p: Promise<T>, ms = clientTimeoutMs()): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(timeoutError(ms)), ms)
+    p.then(
+      (v) => { clearTimeout(t); resolve(v) },
+      (e) => { clearTimeout(t); reject(e) },
+    )
+  })
+}
 
 export interface ErrorInfo {
   /** Clear text for the user. */
@@ -41,6 +77,7 @@ export function describeError(e: unknown): ErrorInfo {
       retryable: false,
     }
   }
+  if (code === 'CLIENT_TIMEOUT') return { message: e.message, retryable: true }
   if (code === 'PDF_TOO_LARGE') return { message: e.message, retryable: false }
   if (code === 'BUILD_FAILED') return { message: e.message, retryable: true }
   if (status === 401) {

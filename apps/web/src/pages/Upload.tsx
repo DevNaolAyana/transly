@@ -20,6 +20,7 @@ export default function Upload() {
   const [target, setTarget] = useState<LangCode>('en')
   const [docType, setDocType] = useState<DocType>('other')
   const [busy, setBusy] = useState(false)
+  const submitting = useRef(false)
   const [error, setError] = useState<unknown>(null)
   const [prep, setPrep] = useState<PreparedFile | null>(null)
   const [preparing, setPreparing] = useState(false)
@@ -67,7 +68,8 @@ export default function Upload() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!file || sameLang) return
+    if (!file || sameLang || submitting.current) return
+    submitting.current = true // blocks a second tap before React has disabled the button
     setBusy(true)
     setError(null)
     try {
@@ -76,6 +78,7 @@ export default function Upload() {
     } catch (err) {
       setError(err)
       setBusy(false)
+      submitting.current = false
     }
   }
 
