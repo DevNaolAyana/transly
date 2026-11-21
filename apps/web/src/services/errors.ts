@@ -69,7 +69,11 @@ export function describeError(e: unknown): ErrorInfo {
   const { status, code } = e
   const detail = e.message
   if (code === 'RATE_LIMITED' || status === 429) {
-    return { message: 'Too many requests right now. Please try again in a minute.', detail, retryable: true }
+    // The backend's message says what kind of limit it is. A daily limit will not clear in a minute, so no Retry then.
+    const fromServer = detail.trim()
+    const usable = fromServer && !/^Request failed \(HTTP \d+\)$/.test(fromServer) // that text is our own fallback, not the server's
+    const message = usable ? fromServer : 'Too many requests right now. Please try again in a minute.'
+    return { message, retryable: !/daily/i.test(message) }
   }
   if (code === 'UNSUPPORTED_LANGUAGE') {
     return {

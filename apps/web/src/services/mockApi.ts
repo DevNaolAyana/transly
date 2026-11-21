@@ -11,6 +11,7 @@ import type { DocumentRecord, Role } from '../types'
  * "rate-extract.png". Stages: upload, extract, translate, reserve, complete.
  * Kinds: fail (503, fails once), rate (429 RATE_LIMITED, fails once), down (500, always),
  * lang (422 UNSUPPORTED_LANGUAGE), auth (401), big (413), bad (422).
+ * Daily limit (extract and translate): file name containing "daily" -> RATE_LIMITED, "Daily limit reached..." (no Retry).
  * Slow triggers (extract and translate): file name containing "slow" waits 8 s; containing "hang" never answers,
  * so the client timeout (150 s, or localStorage 'transly.mock.timeoutMs' in mock mode) shows its Retry message.
  * Verify triggers: id "revoked-demo" -> revoked, id "missing-demo" -> not_found.
@@ -20,7 +21,7 @@ import type { DocumentRecord, Role } from '../types'
 type ErrCode = ApiErrorBody['error']['code']
 const FAILURES: Record<string, { status: number; code: ErrCode; msg: string; once?: boolean }> = {
   fail: { status: 503, code: 'INTERNAL', msg: 'Mock server failure', once: true },
-  rate: { status: 429, code: 'RATE_LIMITED', msg: 'Mock rate limit', once: true },
+  rate: { status: 429, code: 'RATE_LIMITED', msg: 'Too many requests. Please wait a minute and try again.', once: true },
   down: { status: 500, code: 'INTERNAL', msg: 'Mock server is down' },
   lang: { status: 422, code: 'UNSUPPORTED_LANGUAGE', msg: 'Mock unsupported language' },
   auth: { status: 401, code: 'UNAUTHORIZED', msg: 'Mock invalid token' },
@@ -48,6 +49,8 @@ function maybeFail(doc: DocumentRecord | undefined, stage: Stage) {
 /** "slow" in the file name: extract and translate wait 8 s. "hang": they never answer (shows the client timeout). */
 async function slowTrigger(doc: DocumentRecord) {
   const name = doc.storagePath.toLowerCase()
+  // "daily": the daily limit is used up (always fails, retrying cannot help)
+  if (name.includes('daily')) throw new ApiError('Daily limit reached. You can process more documents tomorrow.', 429, 'RATE_LIMITED')
   if (name.includes('hang')) await new Promise(() => {})
   if (name.includes('slow')) await wait(8000)
 }

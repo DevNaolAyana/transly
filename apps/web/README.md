@@ -59,6 +59,8 @@ Everything is fake and stored in the browser's localStorage (`transly.mock.db.v1
   - Stages: `upload`, `extract`, `translate`, `reserve`, `complete`.
   - Kinds: `fail` (503, fails once), `rate` (429, fails once), `down` (500, always), `lang` (422 unsupported
     language), `auth` (401), `big` (413), `bad` (422).
+- **Daily limit:** a file name containing `daily` makes extract and translate fail with `RATE_LIMITED` and a
+  "Daily limit reached" message (no Retry button, as for any rate-limit message that mentions a daily limit).
 - **Slow triggers:** a file name containing `slow` makes extract and translate wait 8 s. A name containing
   `hang` makes them never answer, so the client timeout appears. To see it sooner, run
   `localStorage.setItem('transly.mock.timeoutMs', '5000')` in the browser console (mock mode only; default is 150 s).
