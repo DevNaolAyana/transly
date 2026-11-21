@@ -62,3 +62,11 @@ export interface VerifyResponse {
 // GET /api/v1/verify/:verificationId  (header "Authorization: Bearer <partner key>").
 // Demo key only. NOT connected to any government system. Wrong or missing key -> 401.
 export interface PartnerVerifyResponse extends Omit<VerifyResponse, 'pdfUrl'> { sha256?: string }
+
+// ---- v2.1: payments (Chapa TEST mode only) ----
+// POST /api/payment/init  { documentId } -> { checkoutUrl, txRef, amountEtb }   (document owner)
+// POST /api/payment/verify { txRef } -> { paid }   (backend calls Chapa's verify endpoint and sets documents.paid)
+export interface PaymentInitRequest { documentId: string }
+export interface PaymentInitResponse { checkoutUrl: string; txRef: string; amountEtb: number }
+export interface PaymentVerifyRequest { txRef: string }
+export interface PaymentVerifyResponse { paid: boolean }
