@@ -86,12 +86,12 @@ export default function Upload() {
           {file && (
             <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
               {preview ? (
-                <img src={preview} alt="Selected document preview" className="h-20 w-20 rounded object-cover" />
+                <img src={preview} alt="Selected document preview" className="h-16 w-16 shrink-0 rounded object-cover sm:h-20 sm:w-20" />
               ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded bg-red-100 text-sm font-bold text-red-700">PDF</div>
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-red-100 text-sm font-bold text-red-700">PDF</div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{file.name}</p>
+                <p className="break-all font-medium">{file.name}</p>
                 <p className="text-xs text-slate-500">{(file.size / 1024).toFixed(0)} KB · {kind?.toUpperCase()}</p>
               </div>
               <Button type="button" variant="ghost" onClick={() => { setFile(null); setKind(null) }}>Remove</Button>

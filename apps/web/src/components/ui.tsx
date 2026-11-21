@@ -94,11 +94,11 @@ export function PageLoading({ label = 'Loading…' }: { label?: string }) {
 export function StepBar({ step }: { step: 1 | 2 | 3 | 4 }) {
   const steps = ['Upload', 'Review text', 'Translate', 'Issue PDF']
   return (
-    <ol className="mb-5 flex items-center gap-1 text-xs sm:text-sm" aria-label="Progress">
+    <ol className="mb-5 flex items-stretch gap-1 text-xs sm:text-sm" aria-label="Progress">
       {steps.map((s, i) => (
         <li
           key={s}
-          className={`flex-1 rounded-full px-2 py-1 text-center ${
+          className={`flex flex-1 items-center justify-center rounded-full px-2 py-1 text-center leading-tight ${
             i + 1 === step ? 'bg-brand-600 font-semibold text-white' : i + 1 < step ? 'bg-brand-100 text-brand-900' : 'bg-slate-200 text-slate-600'
           }`}
         >
