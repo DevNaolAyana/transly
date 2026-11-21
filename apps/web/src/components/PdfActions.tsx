@@ -61,17 +61,27 @@ export function ShareButtons({ link }: { link: string }) {
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
 
   async function copy() {
+    // Older / restricted browsers (non-secure origin, unfocused page) reject the Clipboard API: fall back to execCommand.
+    const legacyCopy = () => {
+      const t = document.createElement('textarea')
+      t.value = link
+      t.setAttribute('readonly', '')
+      t.style.cssText = 'position:fixed;top:0;left:0;opacity:0'
+      document.body.appendChild(t)
+      t.select()
+      t.setSelectionRange(0, link.length)
+      const ok = document.execCommand('copy')
+      t.remove()
+      if (!ok) throw new Error('copy failed')
+    }
     try {
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(link)
-      else {
-        const t = document.createElement('textarea')
-        t.value = link
-        document.body.appendChild(t)
-        t.select()
-        const ok = document.execCommand('copy')
-        t.remove()
-        if (!ok) throw new Error('copy failed')
-      }
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(link)
+        } catch {
+          legacyCopy()
+        }
+      } else legacyCopy()
       setState('copied')
       setTimeout(() => setState('idle'), 2500)
     } catch {

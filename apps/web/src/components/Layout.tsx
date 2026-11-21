@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { USE_MOCKS } from '../lib/constants'
@@ -21,6 +21,9 @@ export function Layout() {
   const { user, role, signOut } = useAuth()
   const [open, setOpen] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const { pathname } = useLocation()
+  // Close the mobile menu whenever the page changes (also for links inside the page, not just the menu).
+  useEffect(() => setOpen(false), [pathname])
   const link = ({ isActive }: { isActive: boolean }) =>
     `rounded-md px-3 py-2 text-sm font-medium ${isActive ? 'bg-brand-100 text-brand-900' : 'text-slate-700 hover:bg-slate-100'}`
   return (

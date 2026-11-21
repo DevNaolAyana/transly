@@ -77,12 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadRole])
 
   const value = useMemo<AuthState>(
-    () => ({
-      user,
-      role,
-      loading,
-      profileError,
-      async signIn(email, password) {
+    () => {
+      const signIn: AuthState['signIn'] = async (email, password) => {
         if (USE_MOCKS) {
           // MOCK auth: any credentials work. An email containing "translator" gets the translator role.
           const r: Role = email.toLowerCase().includes('translator') ? 'translator' : 'customer'
@@ -95,18 +91,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!supabase) throw new Error('Supabase is not configured (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).')
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw new Error(error.message)
-      },
-      async signUp(email, password) {
+      }
+      // NOTE: callers destructure these functions (const { signUp } = useAuth()), so never use `this` here.
+      const signUp: AuthState['signUp'] = async (email, password) => {
         if (USE_MOCKS) {
-          await this.signIn(email, password)
+          await signIn(email, password)
           return true
         }
         if (!supabase) throw new Error('Supabase is not configured (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).')
         const { data, error } = await supabase.auth.signUp({ email, password })
         if (error) throw new Error(error.message)
         return !!data.session
-      },
-      async signOut() {
+      }
+      const signOut: AuthState['signOut'] = async () => {
         if (USE_MOCKS) {
           localStorage.removeItem(MOCK_KEY)
           setUser(null)
@@ -117,8 +114,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const { error } = await supabase.auth.signOut()
           if (error) throw new Error(error.message)
         }
-      },
-    }),
+      }
+      return { user, role, loading, profileError, signIn, signUp, signOut }
+    },
     [user, role, loading, profileError],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

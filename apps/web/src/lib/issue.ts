@@ -128,5 +128,10 @@ export function rememberIssued(verificationId: string, pdf: Uint8Array, document
   }
 }
 export const getIssued = (verificationId: string) => issuedPdfs.get(verificationId)
+/** Reverse lookup (this device only): the verification id of an issued document, if this browser issued it. */
+export function getIssuedVerificationId(documentId: string): string | undefined {
+  const entries = Object.entries(readMap()).filter(([, d]) => d === documentId)
+  return entries.length ? entries[entries.length - 1][0] : undefined
+}
 export const getIssuedDocumentId = (verificationId: string): string | undefined =>
   issuedPdfs.get(verificationId)?.documentId ?? readMap()[verificationId]

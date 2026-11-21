@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Card, PageLoading } from '../components/ui'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { docTypeLabel, langLabel } from '../lib/constants'
+import { getIssuedVerificationId } from '../lib/issue'
 import { api } from '../services/api'
 import type { DocumentRecord } from '../types'
 
@@ -52,6 +53,9 @@ export default function Documents() {
                 </p>
                 <p className="mt-1 text-xs font-semibold text-slate-700">{STATUS_LABEL[d.status] ?? d.status}</p>
               </div>
+              {d.status === 'issued' && getIssuedVerificationId(d.id) && (
+                <Link to={`/issued/${getIssuedVerificationId(d.id)}`} className="shrink-0 text-sm font-semibold text-brand-700 underline">View</Link>
+              )}
               {d.status !== 'issued' && d.status !== 'in_review' && (
                 <Link to={next(d)} className="shrink-0 text-sm font-semibold text-brand-700 underline">Continue</Link>
               )}
