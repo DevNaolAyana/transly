@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { Alert, Button, Card, StepBar } from '../components/ui'
 import { ErrorNotice } from '../components/ErrorNotice'
-import { getIssued, getIssuedDocumentId } from '../lib/issue'
+import { getIssued, getIssuedDocumentId, wasIssuedBy } from '../lib/issue'
 import { verifyUrl } from '../lib/links'
 import { api } from '../services/api'
 import { errMsg } from '../services/errors'
@@ -42,7 +42,9 @@ export default function Issued() {
       })
   }, [mem, verificationId])
 
-  // Only the document owner sees "Revoke" (the API enforces it as well).
+  // "Revoke" is offered to the document owner, and to the translator who issued it from this browser
+  // (the API enforces who may actually revoke).
+  const issuedHere = !!user && wasIssuedBy(verificationId, user.id)
   useEffect(() => {
     const docId = getIssuedDocumentId(verificationId)
     if (!docId || !user) return
@@ -113,7 +115,7 @@ export default function Issued() {
         </div>
       </Card>
 
-      {isOwner && !revoked && (
+      {(isOwner || issuedHere) && !revoked && (
         <Card className="space-y-3 border-red-200">
           <h2 className="font-bold text-red-800">Revoke this document</h2>
           <p className="text-sm text-slate-600">

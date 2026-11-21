@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, Button, Card, Field, inputCls } from './ui'
 import { ErrorNotice } from './ErrorNotice'
+import { useAuth } from '../context/AuthContext'
 import { IssueError, issueDocument, rememberIssued, type IssueStage } from '../lib/issue'
 import type { Block, ReviewStatus } from '@shared/contract'
 import type { DocumentRecord } from '../types'
@@ -38,6 +39,7 @@ export function IssuePanel({
   intro?: string
 }) {
   const nav = useNavigate()
+  const { user } = useAuth()
   const [name, setName] = useState(defaultName)
   const [phone, setPhone] = useState('')
   const [isPublic, setIsPublic] = useState(false)
@@ -69,7 +71,7 @@ export function IssuePanel({
         },
         setStage,
       )
-      rememberIssued(res.verificationId, res.pdf, doc.id)
+      rememberIssued(res.verificationId, res.pdf, doc.id, user?.id)
       nav(`/issued/${res.verificationId}`, { state: { sha256: res.sha256, isPublic } })
     } catch (err) {
       if (err instanceof IssueError) setResumeId(err.verificationId)

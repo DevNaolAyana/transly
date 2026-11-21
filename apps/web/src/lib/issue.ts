@@ -118,15 +118,31 @@ function readMap(): Record<string, string> {
   }
 }
 
-/** Remember which document a verification id belongs to (ids only, no content), so the issued page survives a reload. */
-export function rememberIssued(verificationId: string, pdf: Uint8Array, documentId: string) {
+const BY_KEY = 'transly.issuedBy'
+
+function readBy(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(BY_KEY) ?? '{}') as Record<string, string>
+  } catch {
+    return {}
+  }
+}
+
+/**
+ * Remember which document a verification id belongs to, and which signed-in user issued it (ids only, no content),
+ * so the issued page survives a reload and the issuing translator can still revoke.
+ */
+export function rememberIssued(verificationId: string, pdf: Uint8Array, documentId: string, issuerUserId?: string) {
   issuedPdfs.set(verificationId, { pdf, documentId })
   try {
     localStorage.setItem(MAP_KEY, JSON.stringify({ ...readMap(), [verificationId]: documentId }))
+    if (issuerUserId) localStorage.setItem(BY_KEY, JSON.stringify({ ...readBy(), [verificationId]: issuerUserId }))
   } catch {
     /* storage unavailable: revoke button just won't be offered after a reload */
   }
 }
+/** True when this browser issued the document while `userId` was signed in (the API still decides if revoking is allowed). */
+export const wasIssuedBy = (verificationId: string, userId: string): boolean => readBy()[verificationId] === userId
 export const getIssued = (verificationId: string) => issuedPdfs.get(verificationId)
 /** Reverse lookup (this device only): the verification id of an issued document, if this browser issued it. */
 export function getIssuedVerificationId(documentId: string): string | undefined {

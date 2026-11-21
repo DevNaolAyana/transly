@@ -61,6 +61,7 @@ interface IssuedRec {
   verificationId: string
   documentId: string
   issuerName: string
+  issuedBy?: string // user id that reserved it; like the backend, the issuer may revoke as well as the owner
   reviewStatus: 'machine' | 'human_reviewed'
   isPublic: boolean
   status: 'reserved' | 'issued' | 'revoked'
@@ -269,8 +270,9 @@ export const mockApi: Api = {
     const rec = db.issued[verificationId]
     if (!rec || rec.status === 'reserved') throw new ApiError('No issued document with this verification ID (mock).', 404, 'NOT_FOUND')
     const d = db.docs[rec.documentId]
-    if (!d || d.ownerId !== mockCurrentUserId()) {
-      throw new ApiError('Only the owner of the document can revoke it (mock).', 403, 'FORBIDDEN')
+    const me = mockCurrentUserId()
+    if (!d || (d.ownerId !== me && rec.issuedBy !== me)) {
+      throw new ApiError('Only the owner or the issuer of the document can revoke it (mock).', 403, 'FORBIDDEN')
     }
     if (rec.status === 'revoked') throw new ApiError('This document is already revoked (mock).', 409, 'BAD_REQUEST')
     rec.status = 'revoked'
@@ -292,6 +294,7 @@ export const mockApi: Api = {
       verificationId,
       documentId: p.documentId,
       issuerName: p.issuerName,
+      issuedBy: mockCurrentUserId(),
       reviewStatus,
       isPublic: p.isPublic,
       status: 'reserved',
