@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { Alert, Button, Card, StepBar } from '../components/ui'
 import { ErrorNotice } from '../components/ErrorNotice'
@@ -68,11 +68,18 @@ export default function Issued() {
     }
   }, [verificationId])
 
-  const blobUrl = useMemo(
-    () => (mem ? URL.createObjectURL(new Blob([mem.pdf as BlobPart], { type: 'application/pdf' })) : null),
-    [mem],
-  )
-  useEffect(() => () => { if (blobUrl) URL.revokeObjectURL(blobUrl) }, [blobUrl])
+  // Create the blob URL inside the effect that revokes it. (Creating it in useMemo and revoking it in a separate
+  // effect cleanup left a revoked URL behind when React StrictMode ran the cleanup on mount: dead preview and Download.)
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (!mem) {
+      setBlobUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(new Blob([mem.pdf as BlobPart], { type: 'application/pdf' }))
+    setBlobUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [mem])
 
   const pdfUrl = blobUrl ?? remoteUrl
   const link = verifyUrl(verificationId)
