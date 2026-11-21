@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Card, PageLoading } from '../components/ui'
+import { Link, useLocation } from 'react-router-dom'
+import { Alert, Card, PageLoading } from '../components/ui'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { docTypeLabel, langLabel } from '../lib/constants'
 import { getIssuedVerificationId } from '../lib/issue'
@@ -17,6 +17,7 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 export default function Documents() {
+  const notice = (useLocation().state as { notice?: string } | null)?.notice
   const [docs, setDocs] = useState<DocumentRecord[] | null>(null)
   const [error, setError] = useState<unknown>(null)
 
@@ -39,6 +40,7 @@ export default function Documents() {
         <h1 className="text-2xl font-bold">My documents</h1>
         <Link to="/upload" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white">New document</Link>
       </div>
+      {notice && <div className="mb-4"><Alert tone="success">{notice}</Alert></div>}
       {error != null && <ErrorNotice title="Could not load documents" error={error} onRetry={load} />}
       {!docs && error == null && <PageLoading />}
       {docs && docs.length === 0 && <Card>No documents yet. <Link className="text-brand-700 underline" to="/upload">Upload your first one.</Link></Card>}

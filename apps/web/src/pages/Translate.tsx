@@ -100,15 +100,19 @@ export default function Translate() {
     })
   }
 
+  const sendingReview = useRef(false)
   async function sendForReview() {
+    if (sendingReview.current) return
+    sendingReview.current = true
     setReviewBusy(true)
     setReviewError(null)
     try {
       await api.requestHumanReview(id)
-      nav('/documents')
+      nav('/documents', { state: { notice: 'Sent for human review. A translator will check it and issue the PDF.' } })
     } catch (e) {
       setReviewError(e)
       setReviewBusy(false)
+      sendingReview.current = false
     }
   }
 
@@ -135,7 +139,7 @@ export default function Translate() {
 
   return (
     <div>
-      <StepBar step={4} />
+      <StepBar step={3} />
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold">Translation</h1>

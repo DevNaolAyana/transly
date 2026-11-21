@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, Button, Card, Field, inputCls } from './ui'
 import { ErrorNotice } from './ErrorNotice'
@@ -45,10 +45,13 @@ export function IssuePanel({
   const [error, setError] = useState<IssueError | Error | null>(null)
   const [resumeId, setResumeId] = useState<string | undefined>()
   const busy = stage !== null
+  // Each submit reserves a verification ID, so a second tap before React re-renders must be ignored.
+  const submitting = useRef(false)
 
   async function submit(e?: FormEvent) {
     e?.preventDefault()
-    if (!name.trim()) return
+    if (!name.trim() || submitting.current) return
+    submitting.current = true
     setError(null)
     try {
       const res = await issueDocument(
@@ -72,6 +75,7 @@ export function IssuePanel({
       if (err instanceof IssueError) setResumeId(err.verificationId)
       setError(err instanceof Error ? err : new Error(String(err)))
       setStage(null)
+      submitting.current = false
     }
   }
 
