@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "dev:api": "tsx --env-file=.env scripts/dev-api.ts",
     "gemini:test": "tsx --env-file=.env scripts/gemini-test.ts"
   },
   "dependencies": {

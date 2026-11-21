@@ -4,6 +4,10 @@
   "installCommand": "npm install && npm install --prefix apps/web",
   "buildCommand": "npm run build --prefix apps/web",
   "outputDirectory": "apps/web/dist",
+  "functions": {
+    "api/extract.ts": { "maxDuration": 150 },
+    "api/translate.ts": { "maxDuration": 150 }
+  },
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
