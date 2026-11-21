@@ -55,6 +55,21 @@ export function usePdfActions(url: string | null, filename: string) {
   return { download, print, error }
 }
 
+/**
+ * Inline PDF preview. Chrome on Android (and some other phone browsers) cannot show a PDF inside the page and
+ * leave an empty box, so on touch devices the preview starts collapsed and points to Download instead.
+ */
+export function PdfPreview({ url, title, className = '' }: { url: string; title: string; className?: string }) {
+  const [show, setShow] = useState(() => !window.matchMedia('(pointer: coarse)').matches)
+  if (show) return <iframe title={title} src={url} className={className} />
+  return (
+    <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-700">
+      <p>Phones often cannot show a PDF inside the page. Use <span className="font-semibold">Download PDF</span> to open it in your PDF viewer.</p>
+      <Button variant="ghost" className="mt-1 !px-0" onClick={() => setShow(true)}>Try to show it here</Button>
+    </div>
+  )
+}
+
 /** Copy-link and (when the device supports it) native share. */
 export function ShareButtons({ link }: { link: string }) {
   const [state, setState] = useState<'idle' | 'copied' | 'error'>('idle')

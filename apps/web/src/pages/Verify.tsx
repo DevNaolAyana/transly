@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Alert, Button, Card, PageLoading } from '../components/ui'
 import { ErrorNotice } from '../components/ErrorNotice'
-import { ShareButtons, usePdfActions } from '../components/PdfActions'
+import { PdfPreview, ShareButtons, usePdfActions } from '../components/PdfActions'
 import { docTypeLabel, langLabel } from '../lib/constants'
 import { verifyUrl } from '../lib/links'
 import { api } from '../services/api'
@@ -82,7 +82,7 @@ export default function Verify() {
                 <Button variant="secondary" onClick={actions.print}>🖨 Print</Button>
               </div>
               {actions.error && <Alert tone="error">{actions.error}</Alert>}
-              <iframe title="Document PDF" src={data.pdfUrl} className="h-[65vh] w-full rounded border border-slate-200" />
+              <PdfPreview title="Document PDF" url={data.pdfUrl} className="h-[65vh] w-full rounded border border-slate-200" />
             </>
           ) : (
             <p className="text-sm text-slate-600">The issuer has not made the PDF public, so it is not shown here.</p>

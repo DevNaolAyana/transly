@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { Alert, Button, Card } from '../components/ui'
+import { Alert, Button, Card, StepBar } from '../components/ui'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { getIssued, getIssuedDocumentId } from '../lib/issue'
 import { verifyUrl } from '../lib/links'
 import { api } from '../services/api'
 import { errMsg } from '../services/errors'
 import { useAuth } from '../context/AuthContext'
-import { ShareButtons, usePdfActions } from '../components/PdfActions'
+import { PdfPreview, ShareButtons, usePdfActions } from '../components/PdfActions'
 import type { VerifyResult } from '@shared/contract'
 
 export default function Issued() {
@@ -15,6 +15,8 @@ export default function Issued() {
   const loc = useLocation()
   const { user } = useAuth()
   const sha = (loc.state as { sha256?: string } | null)?.sha256
+  // Arrived straight from issuing (not from "My documents"): finish the step bar.
+  const justIssued = !!sha
   const mem = getIssued(verificationId)
   const [remoteUrl, setRemoteUrl] = useState<string | null>(null)
   const [remoteErr, setRemoteErr] = useState<string | null>(null)
@@ -77,12 +79,14 @@ export default function Issued() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
+      {justIssued && <StepBar step={4} />}
+      <h1 className="text-2xl font-bold">{revoked ? 'Document revoked' : 'Document issued'}</h1>
       {revoked ? (
-        <Alert tone="error" title="Document revoked">
+        <Alert tone="error">
           This document has been revoked. Anyone who scans its QR code will see that it is no longer valid.
         </Alert>
       ) : (
-        <Alert tone="success" title="Document issued">
+        <Alert tone="success">
           Your PDF has been created and registered. Anyone can check it at the link below.
         </Alert>
       )}
@@ -132,7 +136,7 @@ export default function Issued() {
 
       {pdfUrl && (
         <Card className="!p-2">
-          <iframe title="Issued PDF" src={pdfUrl} className="h-[70vh] w-full rounded" />
+          <PdfPreview title="Issued PDF" url={pdfUrl} className="h-[70vh] w-full rounded" />
         </Card>
       )}
       <Link to="/documents" className="inline-block text-sm text-slate-600 underline">Back to my documents</Link>
