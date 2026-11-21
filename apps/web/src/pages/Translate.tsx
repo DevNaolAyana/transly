@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Alert, Button, Card, PageLoading, StepBar } from '../components/ui'
 import { SideBySide } from '../components/SideBySide'
+import { IssuePanel } from '../components/IssuePanel'
 import { checkTranslated, loadDraft, sameBlocks, saveDraft } from '../lib/draft'
 import { langLabel } from '../lib/constants'
 import { api } from '../services/api'
@@ -128,7 +129,7 @@ export default function Translate() {
 
   return (
     <div>
-      <StepBar step={3} />
+      <StepBar step={4} />
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold">Translation</h1>
@@ -163,6 +164,17 @@ export default function Translate() {
         translatedLabel={langLabel(doc.targetLang)}
         preview
       />
+
+      <div className="mt-4">
+        <IssuePanel
+          doc={doc}
+          blocks={translated}
+          reviewStatus="machine"
+          title="Issue the PDF now (machine translated)"
+          submitLabel="Issue PDF with QR code"
+          intro="The PDF will clearly say “Machine translated, not human reviewed”. If you want a person to check it first, use the human review option below."
+        />
+      </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <Card>
