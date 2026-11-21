@@ -61,7 +61,7 @@ Everything is fake and stored in the browser's localStorage (`transly.mock.db.v1
     language), `auth` (401), `big` (413), `bad` (422).
 - **Slow triggers:** a file name containing `slow` makes extract and translate wait 8 s. A name containing
   `hang` makes them never answer, so the client timeout appears. To see it sooner, run
-  `localStorage.setItem('transly.mock.timeoutMs', '5000')` in the browser console (mock mode only; default is 120 s).
+  `localStorage.setItem('transly.mock.timeoutMs', '5000')` in the browser console (mock mode only; default is 150 s).
 - **Verify page:** `/v/revoked-demo` shows a revoked document, `/v/missing-demo` a not-found one.
 - To start fresh, clear the site's localStorage.
 
@@ -72,7 +72,7 @@ Everything is fake and stored in the browser's localStorage (`transly.mock.db.v1
   are, up to 8 MB. Empty, unsupported, damaged and oversized files get a clear message; very small or very
   narrow pictures get a warning that the text may be unreadable.
 - No double submits for upload, extract, translate, human review and issuing.
-- Extract and translate show a progress screen with elapsed seconds and stop waiting after 120 s with a Retry button.
+- Extract and translate show a progress screen with elapsed seconds and stop waiting after 150 s with a Retry button.
 - Errors from the API (`{ error: { code, message } }`) are shown in plain language, with Retry when it can help.
 - Line breaks inside a text block are kept in the editors and in the PDF.
 

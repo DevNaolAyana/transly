@@ -14,8 +14,8 @@ export class ApiError extends Error {
 
 export const errMsg = (e: unknown): string => (e instanceof Error ? e.message : String(e))
 
-/** Extract and translate can take 30 to 90 s, so the client waits up to 120 s before giving up. */
-export const CLIENT_TIMEOUT_MS = 120_000
+/** Extract and translate can take 30 to 90 s, so the client waits up to 150 s before giving up. */
+export const CLIENT_TIMEOUT_MS = 150_000
 
 /** Mock mode only: lets a test shorten the timeout (localStorage 'transly.mock.timeoutMs'). */
 export function clientTimeoutMs(): number {
@@ -29,7 +29,8 @@ export function clientTimeoutMs(): number {
 }
 
 export function timeoutError(ms: number): ApiError {
-  const wait = ms >= 60_000 ? `${Math.round(ms / 60_000)} minutes` : `${Math.round(ms / 1000)} seconds`
+  // whole minutes only when exact: 150 s must not read as "3 minutes"
+  const wait = ms >= 60_000 && ms % 60_000 === 0 ? `${ms / 60_000} minutes` : `${Math.round(ms / 1000)} seconds`
   return new ApiError(
     `This is taking too long (more than ${wait}), so we stopped waiting. Nothing is lost. Please try again.`,
     0,

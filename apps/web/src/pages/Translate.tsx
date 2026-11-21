@@ -121,7 +121,7 @@ export default function Translate() {
     return (
       <div className="mx-auto max-w-2xl">
         <StepBar step={3} />
-        <LongWait message="Translating your document. This can take up to a minute." />
+        <LongWait message="Translating your document. This can take a minute or two." />
       </div>
     )
   }

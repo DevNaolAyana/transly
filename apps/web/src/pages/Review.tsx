@@ -83,7 +83,7 @@ export default function Review() {
     return (
       <div className="mx-auto max-w-2xl">
         <StepBar step={2} />
-        <LongWait message="Reading your document. This can take up to a minute." />
+        <LongWait message="Reading your document. This can take a minute or two." />
       </div>
     )
   }

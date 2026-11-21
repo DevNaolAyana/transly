@@ -74,7 +74,7 @@ async function request<T>(
   const headers: Record<string, string> = {}
   if (auth) Object.assign(headers, await authHeader())
   if (body !== undefined) headers['Content-Type'] = 'application/json'
-  // Extract / translate can take 30-90 s, so wait up to 120 s, then stop with a clear, retryable error.
+  // Extract / translate can take 30-90 s, so wait up to 150 s, then stop with a clear, retryable error.
   const ms = clientTimeoutMs()
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), ms)

@@ -12,7 +12,7 @@ import type { DocumentRecord, Role } from '../types'
  * Kinds: fail (503, fails once), rate (429 RATE_LIMITED, fails once), down (500, always),
  * lang (422 UNSUPPORTED_LANGUAGE), auth (401), big (413), bad (422).
  * Slow triggers (extract and translate): file name containing "slow" waits 8 s; containing "hang" never answers,
- * so the client timeout (120 s, or localStorage 'transly.mock.timeoutMs' in mock mode) shows its Retry message.
+ * so the client timeout (150 s, or localStorage 'transly.mock.timeoutMs' in mock mode) shows its Retry message.
  * Verify triggers: id "revoked-demo" -> revoked, id "missing-demo" -> not_found.
  */
 
