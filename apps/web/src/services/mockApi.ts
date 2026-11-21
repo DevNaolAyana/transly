@@ -8,7 +8,7 @@ import type { DocumentRecord, Role } from '../types'
  * localStorage so the UI can be built and demoed before the real API exists.
  *
  * Failure triggers: upload a file whose name contains "<kind>-<stage>", e.g.
- * "rate-extract.png". Stages: extract, translate, reserve, complete.
+ * "rate-extract.png". Stages: upload, extract, translate, reserve, complete.
  * Kinds: fail (503, fails once), rate (429 RATE_LIMITED, fails once), down (500, always),
  * lang (422 UNSUPPORTED_LANGUAGE), auth (401), big (413), bad (422).
  * Slow triggers (extract and translate): file name containing "slow" waits 8 s; containing "hang" never answers,
@@ -30,7 +30,7 @@ const FAILURES: Record<string, { status: number; code: ErrCode; msg: string; onc
 // key -> time of the first failure. Calls within 500 ms count as the same attempt (React StrictMode runs effects twice in dev).
 const failedOnce = new Map<string, number>()
 
-type Stage = 'extract' | 'translate' | 'reserve' | 'complete'
+type Stage = 'upload' | 'extract' | 'translate' | 'reserve' | 'complete'
 function maybeFail(doc: DocumentRecord | undefined, stage: Stage) {
   if (!doc) return
   for (const [kind, f] of Object.entries(FAILURES)) {
@@ -173,6 +173,8 @@ export const mockApi: Api = {
       blocksTranslated: null,
       createdAt: new Date().toISOString(),
     }
+    // keyed by file name: a retry creates a new id, so "once" must not depend on it
+    maybeFail({ ...doc, id: file.name }, 'upload')
     db.docs[id] = doc
     save(db)
     fileUrls.set(id, URL.createObjectURL(file))

@@ -8,7 +8,8 @@ import { validateFile, type FileKind } from '../lib/validateFile'
 import { api } from '../services/api'
 import type { DocType, LangCode } from '@shared/contract'
 
-const fmt = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${(n / 1024).toFixed(0)} KB`)
+const fmt = (n: number) =>
+  n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : n >= 1024 ? `${(n / 1024).toFixed(0)} KB` : `${n} bytes`
 
 export default function Upload() {
   const nav = useNavigate()
@@ -66,8 +67,8 @@ export default function Upload() {
 
   const sameLang = source === target
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault()
+  async function onSubmit(e?: FormEvent) {
+    e?.preventDefault()
     if (!file || sameLang || submitting.current) return
     submitting.current = true // blocks a second tap before React has disabled the button
     setBusy(true)
@@ -90,10 +91,10 @@ export default function Upload() {
         <p className="mb-4 text-sm text-slate-600">JPG, PNG or PDF. Photos are made smaller automatically; a PDF can be up to 8 MB. Make sure the text is sharp and the whole page is in the picture.</p>
         <form onSubmit={onSubmit} className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Button type="button" variant="secondary" onClick={() => cameraRef.current?.click()}>
+            <Button type="button" variant="secondary" disabled={busy} onClick={() => cameraRef.current?.click()}>
               📷 Take a photo
             </Button>
-            <Button type="button" variant="secondary" onClick={() => pickRef.current?.click()}>
+            <Button type="button" variant="secondary" disabled={busy} onClick={() => pickRef.current?.click()}>
               📁 Choose a file
             </Button>
           </div>
@@ -124,18 +125,19 @@ export default function Upload() {
                     : `${fmt(file.size)} · ${kind?.toUpperCase()}`}
                 </p>
               </div>
-              <Button type="button" variant="ghost" onClick={() => { pickTicket.current++; setFile(null); setKind(null); setPrep(null) }}>Remove</Button>
+              <Button type="button" variant="ghost" disabled={busy} aria-label={`Remove ${file.name}`} onClick={() => { pickTicket.current++; setFile(null); setKind(null); setPrep(null); setError(null) }}>Remove</Button>
             </div>
           )}
+          {file && !preparing && prep?.warning && <Alert tone="warn" title="The text may be hard to read">{prep.warning}</Alert>}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Document language (source)">
-              <select className={inputCls} value={source} onChange={(e) => setSource(e.target.value as LangCode)}>
+              <select className={inputCls} value={source} disabled={busy} onChange={(e) => setSource(e.target.value as LangCode)}>
                 {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label} — {l.native}</option>)}
               </select>
             </Field>
             <Field label="Translate into (target)">
-              <select className={inputCls} value={target} onChange={(e) => setTarget(e.target.value as LangCode)}>
+              <select className={inputCls} value={target} disabled={busy} onChange={(e) => setTarget(e.target.value as LangCode)}>
                 {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label} — {l.native}</option>)}
               </select>
             </Field>
@@ -143,12 +145,12 @@ export default function Upload() {
           {sameLang && <Alert tone="warn">Source and target language must be different.</Alert>}
 
           <Field label="Document type">
-            <select className={inputCls} value={docType} onChange={(e) => setDocType(e.target.value as DocType)}>
+            <select className={inputCls} value={docType} disabled={busy} onChange={(e) => setDocType(e.target.value as DocType)}>
               {DOC_TYPES.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
             </select>
           </Field>
 
-          {error != null && <ErrorNotice title="Upload failed" error={error} />}
+          {error != null && <ErrorNotice title="Upload failed" error={error} onRetry={() => void onSubmit()} />}
 
           <Button type="submit" className="w-full" disabled={!file || sameLang || preparing} loading={busy}>
             {busy ? 'Uploading…' : 'Upload and read the text'}

@@ -97,8 +97,8 @@ export function describeError(e: unknown): ErrorInfo {
     return { message: 'The server had a problem. It is not your fault. Please try again.', detail: code ? `${code}: ${detail}` : detail, retryable: true }
   }
   if (status === 0) {
-    // network failure or a local (non-HTTP) error
-    return { message: e.message, retryable: !!e.message.match(/reach the server|connection/i) }
+    // No HTTP answer: network failure (e.g. Storage "Failed to fetch") or a local error. Trying again is the useful action.
+    return { message: e.message, retryable: true }
   }
   return { message: e.message, retryable: false }
 }

@@ -11,9 +11,14 @@ export interface PreparedFile {
   to?: { w: number; h: number }
   /** True when the image was re-encoded (always for JPG/PNG photos). */
   reencoded: boolean
+  /** Non-blocking advice, e.g. the picture is so small or narrow that text may be unreadable. */
+  warning?: string
 }
 
 const mb = (n: number) => (n / 1048576).toFixed(1)
+const stem = (name: string) => name.replace(/\.[^.]+$/, '') || 'document'
+/** Below this shorter side (px) small print is usually unreadable for text recognition. */
+const MIN_READABLE_SIDE = 500
 
 function toBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob | null> {
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality))
@@ -30,14 +35,19 @@ export async function prepareFile(file: File, kind: FileKind): Promise<PreparedF
     if (file.size > MAX_FILE_BYTES) {
       throw new Error(`This PDF is ${mb(file.size)} MB. The maximum is ${mb(MAX_FILE_BYTES)} MB.`)
     }
-    return { file, originalBytes: file.size, finalBytes: file.size, reencoded: false }
+    // The type was detected from the file's bytes: a PDF named "scan.jpg" must still be uploaded as a PDF.
+    const pdf =
+      file.type === 'application/pdf' && /\.pdf$/i.test(file.name)
+        ? file
+        : new File([file], `${stem(file.name)}.pdf`, { type: 'application/pdf', lastModified: file.lastModified })
+    return { file: pdf, originalBytes: file.size, finalBytes: file.size, reencoded: false }
   }
 
   let bitmap: ImageBitmap
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
   } catch {
-    throw new Error('This picture could not be read. It may be damaged. Try taking the photo again.')
+    throw new Error('This picture could not be opened. It may be damaged, or too large for this device. Try taking the photo again.')
   }
   try {
     const scale = Math.min(1, IMAGE_MAX_SIDE / Math.max(bitmap.width, bitmap.height))
@@ -58,14 +68,19 @@ export async function prepareFile(file: File, kind: FileKind): Promise<PreparedF
         `This picture is still ${mb(blob.size)} MB after shrinking. The maximum is ${mb(MAX_FILE_BYTES)} MB. Try a simpler photo, or take it again.`,
       )
     }
-    const name = file.name.replace(/\.[^.]+$/, '') + '.jpg'
+    const warning =
+      Math.min(w, h) < MIN_READABLE_SIDE
+        ? `This picture is only ${w}×${h} px${scale < 1 ? ' after making it smaller' : ''}, so small text may be too hard to read. ` +
+          'If you can, take a closer, sharper photo, or photograph a long document in parts.'
+        : undefined
     return {
-      file: new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() }),
+      file: new File([blob], `${stem(file.name)}.jpg`, { type: 'image/jpeg', lastModified: Date.now() }),
       originalBytes: file.size,
       finalBytes: blob.size,
       from: { w: bitmap.width, h: bitmap.height },
       to: { w, h },
       reencoded: true,
+      warning,
     }
   } finally {
     bitmap.close()
