@@ -1,0 +1,92 @@
+import { useState } from 'react'
+import { Link, NavLink, Outlet, Navigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { USE_MOCKS } from '../lib/constants'
+import { Alert, PageLoading } from './ui'
+
+export function MockBanner() {
+  if (!USE_MOCKS) return null
+  return (
+    <div className="no-print bg-amber-400 px-3 py-1 text-center text-xs font-bold text-amber-950">
+      MOCK DATA — fake backend and fake login for UI demo only. Nothing here is real or verifiable.
+    </div>
+  )
+}
+
+export function Layout() {
+  const { user, role, signOut } = useAuth()
+  const [open, setOpen] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const link = ({ isActive }: { isActive: boolean }) =>
+    `rounded-md px-3 py-2 text-sm font-medium ${isActive ? 'bg-brand-100 text-brand-900' : 'text-slate-700 hover:bg-slate-100'}`
+  return (
+    <div className="flex min-h-dvh flex-col">
+      <MockBanner />
+      <header className="no-print border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+          <Link to="/" className="text-xl font-extrabold tracking-tight text-brand-700">
+            Transly
+          </Link>
+          <button
+            className="rounded-md p-2 text-slate-700 sm:hidden"
+            aria-label="Menu"
+            aria-expanded={open}
+            onClick={() => setOpen((o) => !o)}
+          >
+            ☰
+          </button>
+          <nav className={`${open ? 'flex' : 'hidden'} absolute left-0 right-0 top-[52px] z-10 flex-col gap-1 border-b bg-white p-3 sm:static sm:flex sm:flex-row sm:items-center sm:border-0 sm:p-0`} onClick={() => setOpen(false)}>
+            {user ? (
+              <>
+                <NavLink to="/upload" className={link}>New document</NavLink>
+                <NavLink to="/documents" className={link}>My documents</NavLink>
+                {role === 'translator' && <NavLink to="/translator" className={link}>Translator queue</NavLink>}
+                <span className="px-3 text-xs text-slate-500">{user.email}</span>
+                <button
+                  className="rounded-md px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  onClick={() => signOut().catch((e) => setErr(e.message))}
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <NavLink to="/login" className={link}>Sign in</NavLink>
+                <Link to="/register" className="rounded-md bg-brand-600 px-3 py-2 text-sm font-semibold text-white">Create account</Link>
+              </>
+            )}
+          </nav>
+        </div>
+      </header>
+      {err && <div className="mx-auto w-full max-w-5xl px-4 pt-3"><Alert tone="error" title="Sign-out failed">{err}</Alert></div>}
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+        <Outlet />
+      </main>
+      <footer className="no-print border-t border-slate-200 bg-white px-4 py-4 text-center text-xs text-slate-500">
+        Transly is an independent project. It is not a government service and is not certified by or affiliated with any government body.
+      </footer>
+    </div>
+  )
+}
+
+export function RequireAuth() {
+  const { user, loading } = useAuth()
+  const loc = useLocation()
+  if (loading) return <PageLoading />
+  if (!user) return <Navigate to="/login" replace state={{ from: loc.pathname }} />
+  return <Outlet />
+}
+
+export function RequireTranslator() {
+  const { role, loading, profileError } = useAuth()
+  if (loading) return <PageLoading />
+  if (role !== 'translator') {
+    return (
+      <Alert tone="warn" title="Translator access only">
+        Your account does not have the translator role.
+        {profileError ? ` (Profile check failed: ${profileError})` : ''}
+      </Alert>
+    )
+  }
+  return <Outlet />
+}
