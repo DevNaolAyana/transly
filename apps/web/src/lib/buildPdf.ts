@@ -226,5 +226,5 @@ function drawFooter(
   wrapText(idLine, w, 7.5, fonts).forEach((l, i) => drawLine(p, l, tx, top - 66 - i * 10, fonts, { size: 7.5, color: MUTED }))
   const pg = `Page ${n} of ${total}`
   drawLine(p, pg, A4[0] - M - measure(pg, 8.5, fonts), 18, fonts, { size: 8.5, color: MUTED })
-  drawLine(p, 'Issued with Transly', M, 18, fonts, { size: 8.5, color: MUTED })
+  drawLine(p, 'Issued with Transly', tx, 18, fonts, { size: 8.5, color: MUTED })
 }
