@@ -30,12 +30,25 @@ const INK = rgb(0.1, 0.1, 0.12)
 const MUTED = rgb(0.4, 0.42, 0.45)
 const LINE = rgb(0.8, 0.82, 0.85)
 
-export const formatDate = (d: Date) => d.toISOString().slice(0, 10)
+/** YYYY-MM-DD in the user's local time zone (UTC would show yesterday's date after 00:00 in Ethiopia). */
+export function formatDate(d: Date): string {
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) throw new Error('Invalid date for the PDF.')
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
 
+/**
+ * The review label printed at the end of the PDF. Never built from empty parts:
+ * throws instead of producing "Human reviewed by , ".
+ */
 export function reviewLabel(status: ReviewStatus, reviewer: string, date: Date): string {
-  return status === 'human_reviewed'
-    ? `Human reviewed by ${reviewer}, ${formatDate(date)}`
-    : 'Machine translated, not human reviewed'
+  if (status === 'machine') return 'Machine translated, not human reviewed'
+  if (status === 'human_reviewed') {
+    const name = (reviewer ?? '').trim()
+    if (!name) throw new Error('Cannot create a human-reviewed PDF without the reviewer name.')
+    return `Human reviewed by ${name}, ${formatDate(date)}`
+  }
+  throw new Error(`Unknown review status: ${String(status)}`)
 }
 
 export function bytesToBase64(bytes: Uint8Array): string {
@@ -47,6 +60,14 @@ export function bytesToBase64(bytes: Uint8Array): string {
 
 export async function buildTranslationPdf(input: BuildPdfInput): Promise<{ bytes: Uint8Array; base64: string }> {
   const date = input.date ?? new Date()
+  // Validate everything printed in the PDF up front: fail loudly, never print blanks.
+  const issuerName = (input.issuerName ?? '').trim()
+  if (!issuerName) throw new Error('Issuer name is required to create the PDF.')
+  if (!input.documentId?.trim()) throw new Error('Document ID is missing.')
+  if (!input.verificationId?.trim()) throw new Error('Verification ID is missing.')
+  const label = reviewLabel(input.reviewStatus, issuerName, date) // throws on empty name/date
+  formatDate(date)
+  input = { ...input, issuerName }
   const url = verifyUrl(input.verificationId, input.origin)
   const { pdf, fonts } = await createPdfWithFonts()
   pdf.setTitle(`Transly translation ${input.documentId}`)
@@ -159,7 +180,6 @@ export async function buildTranslationPdf(input: BuildPdfInput): Promise<{ bytes
   }
 
   // ---------- review label at the end ----------
-  const label = reviewLabel(input.reviewStatus, input.issuerName, date)
   const labelLines = wrapText(label, CONTENT_W - 20, 11, fonts, true)
   const lh = 18 + labelLines.length * 15
   y -= 8

@@ -41,6 +41,8 @@ const msg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
 /** reserve -> build PDF (with QR for that id) -> complete with the exact PDF bytes. */
 export async function issueDocument(p: IssueParams, onStage?: (s: IssueStage) => void): Promise<IssueResult> {
+  // Fail before reserving anything if the issuer name is empty.
+  if (!p.issuerName.trim()) throw new IssueError('build', 'Issuer name is required.')
   let verificationId = p.resumeVerificationId
   if (!verificationId) {
     onStage?.('reserve')
