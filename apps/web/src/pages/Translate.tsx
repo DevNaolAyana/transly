@@ -113,6 +113,7 @@ export default function Translate() {
         <StepBar step={3} />
         <ErrorNotice title="Translation failed" error={error} onRetry={() => void init()}>
           <Link to={`/documents/${id}/review`} className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold">Back to the text</Link>
+          <Link to="/upload" className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold">Start over</Link>
         </ErrorNotice>
       </div>
     )

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, Button, Card, Field, inputCls } from './ui'
+import { ErrorNotice } from './ErrorNotice'
 import { IssueError, issueDocument, rememberIssued, type IssueStage } from '../lib/issue'
 import type { Block, DocumentRecord, ReviewStatus } from '../types'
 
@@ -93,15 +94,18 @@ export function IssuePanel({
         </label>
 
         {error && (
-          <Alert tone="error" title={error instanceof IssueError ? `Failed: ${STAGE_NAME[error.stage]}` : 'Failed'}>
-            {error.message}
-            {resumeId && <p className="mt-1">Your verification ID is already reserved. Retrying will reuse it.</p>}
-          </Alert>
+          <ErrorNotice
+            title={error instanceof IssueError ? `Failed: ${STAGE_NAME[error.stage]}` : 'Failed'}
+            error={error instanceof IssueError ? (error.cause ?? error) : error}
+            onRetry={() => void submit()}
+          >
+            {resumeId && <span className="text-xs">Your verification ID is already reserved. Retrying will reuse it.</span>}
+          </ErrorNotice>
         )}
         {busy && stage && <Alert tone="info">{STAGE_TEXT[stage]}</Alert>}
 
         <Button type="submit" className="w-full" loading={busy} disabled={!name.trim()}>
-          {error ? 'Try again' : submitLabel}
+          {submitLabel}
         </Button>
       </form>
     </Card>

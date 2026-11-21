@@ -1,14 +1,21 @@
 import { api } from '../services/api'
+import { ApiError } from '../services/errors'
 import type { Block, DocType, LangCode, ReviewStatus } from '../types'
 
 export type IssueStage = 'reserve' | 'build' | 'complete'
+
+/** Vercel limits the request body; the base64 PDF sent to /api/issue/complete must stay under about 3 MB. */
+export const MAX_PDF_BASE64_CHARS = 3_000_000
 
 export class IssueError extends Error {
   stage: IssueStage
   /** Set once reserve succeeded, so a retry doesn't create a second record. */
   verificationId?: string
-  constructor(stage: IssueStage, message: string, verificationId?: string) {
+  /** The original error (e.g. ApiError with status/code), used for a clear user message. */
+  cause?: unknown
+  constructor(stage: IssueStage, message: string, verificationId?: string, cause?: unknown) {
     super(message)
+    this.cause = cause
     this.name = 'IssueError'
     this.stage = stage
     this.verificationId = verificationId
@@ -27,6 +34,8 @@ export interface IssueParams {
   isPublic: boolean
   /** Pass the id from a previous IssueError to skip reserve on retry. */
   resumeVerificationId?: string
+  /** Override MAX_PDF_BASE64_CHARS (used for testing the size guard). */
+  maxBase64Chars?: number
 }
 
 export interface IssueResult {
@@ -56,7 +65,7 @@ export async function issueDocument(p: IssueParams, onStage?: (s: IssueStage) =>
       })
       verificationId = r.verificationId
     } catch (e) {
-      throw new IssueError('reserve', msg(e))
+      throw new IssueError('reserve', msg(e), undefined, e)
     }
   }
 
@@ -76,7 +85,15 @@ export async function issueDocument(p: IssueParams, onStage?: (s: IssueStage) =>
       reviewStatus: p.reviewStatus,
     })
   } catch (e) {
-    throw new IssueError('build', `Could not create the PDF: ${msg(e)}`, verificationId)
+    const m = `Could not create the PDF: ${msg(e)}`
+    throw new IssueError('build', m, verificationId, new ApiError(m, 0, 'BUILD_FAILED'))
+  }
+
+  // Check the size before sending: fail with a clear message instead of a server error.
+  const limit = p.maxBase64Chars ?? MAX_PDF_BASE64_CHARS
+  if (built.base64.length > limit) {
+    const m = `The PDF is too large to upload (${(built.base64.length / 1e6).toFixed(2)} MB, the limit is ${(limit / 1e6).toFixed(2)} MB). Shorten the document or split it into smaller parts.`
+    throw new IssueError('build', m, verificationId, new ApiError(m, 0, 'PDF_TOO_LARGE'))
   }
 
   onStage?.('complete')
@@ -84,7 +101,7 @@ export async function issueDocument(p: IssueParams, onStage?: (s: IssueStage) =>
     const done = await api.completeIssue({ verificationId, pdfBase64: built.base64 })
     return { verificationId, sha256: done.sha256, pdf: built.bytes, issuerName: p.issuerName, isPublic: p.isPublic }
   } catch (e) {
-    throw new IssueError('complete', msg(e), verificationId)
+    throw new IssueError('complete', msg(e), verificationId, e)
   }
 }
 

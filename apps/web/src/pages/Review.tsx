@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Alert, Button, Card, PageLoading, StepBar } from '../components/ui'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { BlockField, hasUnclear, isNonText } from '../components/BlockEditor'
 import { BLOCK_TYPE_LABEL, docTypeLabel, langLabel } from '../lib/constants'
 import { loadDraft, saveDraft } from '../lib/draft'
 import { api } from '../services/api'
-import { errMsg } from '../services/errors'
 import type { Block, DocumentRecord, ExtractResponse } from '../types'
 
 type Phase = 'loading' | 'extracting' | 'ready' | 'error'
@@ -16,7 +16,7 @@ export default function Review() {
   const [doc, setDoc] = useState<DocumentRecord | null>(null)
   const [blocks, setBlocks] = useState<Block[]>([])
   const [phase, setPhase] = useState<Phase>('loading')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<unknown>(null)
   const [detected, setDetected] = useState<ExtractResponse | null>(null)
   const [fileUrl, setFileUrl] = useState<string | null>(null)
 
@@ -44,7 +44,7 @@ export default function Review() {
       saveDraft(id, { original: res.blocks })
       setPhase('ready')
     } catch (e) {
-      setError(errMsg(e))
+      setError(e)
       setPhase('error')
     }
   }, [id])
@@ -82,18 +82,9 @@ export default function Review() {
     return (
       <div className="mx-auto max-w-2xl space-y-3">
         <StepBar step={2} />
-        <Alert
-          tone="error"
-          title="Could not read the document"
-          action={
-            <div className="flex gap-2">
-              <Button onClick={() => void run()}>Try again</Button>
-              <Link to="/upload" className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold">Upload a different file</Link>
-            </div>
-          }
-        >
-          {error}
-        </Alert>
+        <ErrorNotice title="Could not read the document" error={error} onRetry={() => void run()}>
+          <Link to="/upload" className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold">Upload a different file</Link>
+        </ErrorNotice>
       </div>
     )
   }

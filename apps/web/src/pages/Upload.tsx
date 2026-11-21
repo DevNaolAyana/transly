@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, Button, Card, Field, StepBar, inputCls } from '../components/ui'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { DOC_TYPES, LANGUAGES } from '../lib/constants'
 import { validateFile, type FileKind } from '../lib/validateFile'
 import { api } from '../services/api'
-import { errMsg } from '../services/errors'
 import type { DocType, LangCode } from '../types'
 
 export default function Upload() {
@@ -17,7 +17,7 @@ export default function Upload() {
   const [target, setTarget] = useState<LangCode>('en')
   const [docType, setDocType] = useState<DocType>('other')
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<unknown>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
   const pickRef = useRef<HTMLInputElement>(null)
 
@@ -57,7 +57,7 @@ export default function Upload() {
       const doc = await api.uploadDocument({ file, sourceLang: source, targetLang: target, docType })
       nav(`/documents/${doc.id}/review`)
     } catch (err) {
-      setError(errMsg(err))
+      setError(err)
       setBusy(false)
     }
   }
@@ -118,7 +118,7 @@ export default function Upload() {
             </select>
           </Field>
 
-          {error && <Alert tone="error" title="Upload failed">{error}</Alert>}
+          {error != null && <ErrorNotice title="Upload failed" error={error} />}
 
           <Button type="submit" className="w-full" disabled={!file || sameLang} loading={busy}>
             {busy ? 'Uploading…' : 'Upload and read the text'}

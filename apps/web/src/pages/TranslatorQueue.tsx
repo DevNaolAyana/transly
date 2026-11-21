@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, Button, Card, PageLoading } from '../components/ui'
+import { Button, Card, PageLoading } from '../components/ui'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { docTypeLabel, langLabel } from '../lib/constants'
 import { api } from '../services/api'
-import { errMsg } from '../services/errors'
 import type { DocumentRecord } from '../types'
 
 export default function TranslatorQueue() {
   const [docs, setDocs] = useState<DocumentRecord[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<unknown>(null)
   const load = useCallback(() => {
     setDocs(null)
     setError(null)
-    api.listReviewQueue().then(setDocs).catch((e) => setError(errMsg(e)))
+    api.listReviewQueue().then(setDocs).catch((e) => setError(e))
   }, [])
   useEffect(load, [load])
 
@@ -22,8 +22,8 @@ export default function TranslatorQueue() {
         <h1 className="text-2xl font-bold">Review queue</h1>
         <Button variant="secondary" onClick={load}>Refresh</Button>
       </div>
-      {error && <Alert tone="error" title="Could not load the queue" action={<Button onClick={load}>Retry</Button>}>{error}</Alert>}
-      {!docs && !error && <PageLoading />}
+      {error != null && <ErrorNotice title="Could not load the queue" error={error} onRetry={load} />}
+      {!docs && error == null && <PageLoading />}
       {docs && docs.length === 0 && <Card>No documents are waiting for review.</Card>}
       <ul className="space-y-3">
         {docs?.map((d) => (

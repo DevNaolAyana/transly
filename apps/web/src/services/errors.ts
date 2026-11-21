@@ -42,12 +42,13 @@ export function describeError(e: unknown): ErrorInfo {
     }
   }
   if (code === 'PDF_TOO_LARGE') return { message: e.message, retryable: false }
+  if (code === 'BUILD_FAILED') return { message: e.message, retryable: true }
   if (status === 401) {
     return { message: 'Your session has expired or you are not signed in. Please sign in again.', detail, retryable: false, needsLogin: true }
   }
   if (status === 413) {
     return {
-      message: 'This is too large for the server. Use a smaller file (under 10 MB) or a document with fewer pages.',
+      message: 'This is too large for the server. Use a smaller file (under 10 MB) or a shorter document.',
       detail,
       retryable: false,
     }

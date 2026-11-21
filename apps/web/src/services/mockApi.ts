@@ -22,7 +22,8 @@ const FAILURES: Record<string, { status: number; code: string; msg: string; once
   big: { status: 413, code: 'PAYLOAD_TOO_LARGE', msg: 'Mock payload too large' },
   bad: { status: 422, code: 'UNPROCESSABLE', msg: 'Mock: the document could not be processed' },
 }
-const failedOnce = new Set<string>()
+// key -> time of the first failure. Calls within 500 ms count as the same attempt (React StrictMode runs effects twice in dev).
+const failedOnce = new Map<string, number>()
 
 type Stage = 'extract' | 'translate' | 'reserve' | 'complete'
 function maybeFail(doc: DocumentRecord | undefined, stage: Stage) {
@@ -31,8 +32,9 @@ function maybeFail(doc: DocumentRecord | undefined, stage: Stage) {
     if (!doc.storagePath.includes(`${kind}-${stage}`)) continue
     const key = `${doc.id}:${stage}:${kind}`
     if (f.once) {
-      if (failedOnce.has(key)) return // second attempt succeeds
-      failedOnce.add(key)
+      const first = failedOnce.get(key)
+      if (first === undefined) failedOnce.set(key, Date.now())
+      else if (Date.now() - first > 500) return // a later retry succeeds
     }
     throw new ApiError(f.msg, f.status, f.code)
   }

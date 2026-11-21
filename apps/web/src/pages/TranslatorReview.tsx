@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Alert, Button, PageLoading } from '../components/ui'
+import { PageLoading } from '../components/ui'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { SideBySide } from '../components/SideBySide'
 import { IssuePanel } from '../components/IssuePanel'
 import { checkTranslated } from '../lib/draft'
 import { langLabel } from '../lib/constants'
 import { api } from '../services/api'
-import { errMsg } from '../services/errors'
 import type { Block, DocumentRecord } from '../types'
 
 export default function TranslatorReview() {
   const { id = '' } = useParams()
   const [doc, setDoc] = useState<DocumentRecord | null>(null)
   const [translated, setTranslated] = useState<Block[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<unknown>(null)
   const [fileUrl, setFileUrl] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -28,17 +28,17 @@ export default function TranslatorReview() {
       setTranslated(d.blocksTranslated)
       api.getSourceFileUrl(d).then(setFileUrl).catch(() => setFileUrl(null))
     } catch (e) {
-      setError(errMsg(e))
+      setError(e)
     }
   }, [id])
   useEffect(() => {
     void load()
   }, [load])
 
-  if (error) {
+  if (error != null) {
     return (
       <div className="mx-auto max-w-2xl">
-        <Alert tone="error" title="Could not open this document" action={<Button onClick={() => void load()}>Retry</Button>}>{error}</Alert>
+        <ErrorNotice title="Could not open this document" error={error} onRetry={() => void load()} />
         <Link to="/translator" className="mt-3 inline-block text-sm underline">Back to the queue</Link>
       </div>
     )

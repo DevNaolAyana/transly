@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, Button, Card, PageLoading } from '../components/ui'
+import { Card, PageLoading } from '../components/ui'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { docTypeLabel, langLabel } from '../lib/constants'
 import { api } from '../services/api'
-import { errMsg } from '../services/errors'
 import type { DocumentRecord } from '../types'
 
 const STATUS_LABEL: Record<string, string> = {
@@ -17,12 +17,12 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default function Documents() {
   const [docs, setDocs] = useState<DocumentRecord[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<unknown>(null)
 
   const load = useCallback(() => {
     setError(null)
     setDocs(null)
-    api.listMyDocuments().then(setDocs).catch((e) => setError(errMsg(e)))
+    api.listMyDocuments().then(setDocs).catch((e) => setError(e))
   }, [])
   useEffect(load, [load])
 
@@ -38,8 +38,8 @@ export default function Documents() {
         <h1 className="text-2xl font-bold">My documents</h1>
         <Link to="/upload" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white">New document</Link>
       </div>
-      {error && <Alert tone="error" title="Could not load documents" action={<Button variant="secondary" onClick={load}>Retry</Button>}>{error}</Alert>}
-      {!docs && !error && <PageLoading />}
+      {error != null && <ErrorNotice title="Could not load documents" error={error} onRetry={load} />}
+      {!docs && error == null && <PageLoading />}
       {docs && docs.length === 0 && <Card>No documents yet. <Link className="text-brand-700 underline" to="/upload">Upload your first one.</Link></Card>}
       <ul className="space-y-3">
         {docs?.map((d) => (

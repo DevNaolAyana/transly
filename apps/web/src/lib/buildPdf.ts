@@ -58,7 +58,7 @@ export function bytesToBase64(bytes: Uint8Array): string {
   return btoa(bin)
 }
 
-export async function buildTranslationPdf(input: BuildPdfInput): Promise<{ bytes: Uint8Array; base64: string }> {
+export async function buildTranslationPdf(input: BuildPdfInput): Promise<{ bytes: Uint8Array; base64: string; pages: number }> {
   const date = input.date ?? new Date()
   // Validate everything printed in the PDF up front: fail loudly, never print blanks.
   const issuerName = (input.issuerName ?? '').trim()
@@ -201,7 +201,7 @@ export async function buildTranslationPdf(input: BuildPdfInput): Promise<{ bytes
   pages.forEach((p, i) => drawFooter(p, fonts, qrImage, url, input.verificationId, i + 1, pages.length))
 
   const bytes = await pdf.save()
-  return { bytes, base64: bytesToBase64(bytes) }
+  return { bytes, base64: bytesToBase64(bytes), pages: pages.length }
 }
 
 function drawFooter(

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Alert, Button, Card, PageLoading } from '../components/ui'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { ShareButtons, usePdfActions } from '../components/PdfActions'
 import { docTypeLabel, langLabel } from '../lib/constants'
 import { verifyUrl } from '../lib/links'
 import { api } from '../services/api'
-import { errMsg } from '../services/errors'
 import type { VerifyResponse } from '../types'
 
 const BANNER = {
@@ -17,23 +17,23 @@ const BANNER = {
 export default function Verify() {
   const { id = '' } = useParams()
   const [data, setData] = useState<VerifyResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<unknown>(null)
 
   const load = useCallback(() => {
     setData(null)
     setError(null)
-    api.verify(id).then(setData).catch((e) => setError(errMsg(e)))
+    api.verify(id).then(setData).catch((e) => setError(e))
   }, [id])
   useEffect(load, [load])
 
   const actions = usePdfActions(data?.pdfUrl ?? null, `transly-${id.slice(0, 8)}.pdf`)
 
-  if (error) {
+  if (error != null) {
     return (
       <div className="mx-auto max-w-xl">
-        <Alert tone="error" title="Could not check this document" action={<Button onClick={load}>Try again</Button>}>
-          {error} This is a connection or server problem. It does not mean the document is invalid.
-        </Alert>
+        <ErrorNotice title="Could not check this document" error={error} onRetry={load} retryLabel="Try again">
+          <span className="text-xs">This is a connection or server problem. It does not mean the document is invalid.</span>
+        </ErrorNotice>
       </div>
     )
   }
