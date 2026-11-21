@@ -35,6 +35,11 @@ export interface GenerateJsonOptions {
   input?: string;
   /** Per-attempt timeout. */
   timeoutMs?: number;
+  /**
+   * Epoch ms by which the whole call must be over. Attempts are shortened to
+   * fit and skipped when less than MIN_ATTEMPT_MS is left.
+   */
+  deadlineAt?: number;
   /** Overrides the default thinking configuration (used by the test script). */
   thinkingConfig?: Record<string, unknown>;
 }
@@ -58,6 +63,7 @@ export interface GenerateJsonResult {
 // 120 s stay under the 300 s Vercel function limit.
 const DEFAULT_TIMEOUT_MS = 120_000;
 const RETRY_PAUSE_MS = 2_000;
+const MIN_ATTEMPT_MS = 5_000;
 // 429 and 503 are the documented overload answers; 500 and 504 are transient too.
 const RETRYABLE_STATUS = new Set([429, 500, 503, 504]);
 
@@ -86,7 +92,7 @@ function detailOf(error: unknown): string {
   return text.slice(0, 160);
 }
 
-async function attempt(ai: GoogleGenAI, model: string, options: GenerateJsonOptions): Promise<string> {
+async function attempt(ai: GoogleGenAI, model: string, options: GenerateJsonOptions, timeoutMs: number): Promise<string> {
   const parts: Array<Record<string, unknown>> = [];
   if (options.file) {
     parts.push({ inlineData: { mimeType: options.file.mimeType, data: options.file.data.toString('base64') } });
@@ -101,7 +107,7 @@ async function attempt(ai: GoogleGenAI, model: string, options: GenerateJsonOpti
       temperature: 0,
       responseMimeType: 'application/json',
       ...(options.thinkingConfig ? { thinkingConfig: options.thinkingConfig } : {}),
-      httpOptions: { timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS },
+      httpOptions: { timeout: timeoutMs },
     },
   });
   const text = response.text;
@@ -122,9 +128,15 @@ export async function generateJson(options: GenerateJsonOptions): Promise<Genera
     if (attempts.length === 1 && second === primary) {
       await new Promise((resolve) => setTimeout(resolve, RETRY_PAUSE_MS));
     }
+    let timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    if (options.deadlineAt !== undefined) {
+      const left = options.deadlineAt - Date.now();
+      if (left < MIN_ATTEMPT_MS) break;
+      timeoutMs = Math.min(timeoutMs, left);
+    }
     const started = Date.now();
     try {
-      const text = await attempt(ai, model, options);
+      const text = await attempt(ai, model, options, timeoutMs);
       attempts.push({ model, ms: Date.now() - started, outcome: 'ok' });
       return { text, model, attempts };
     } catch (error) {
