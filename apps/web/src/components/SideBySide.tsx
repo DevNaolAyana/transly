@@ -27,9 +27,13 @@ export function SideBySide({
       </div>
       <ol className="space-y-4">
         {original.map((o, i) => (
-          <li key={o.id} className="grid gap-2 md:grid-cols-2 md:gap-4">
+          <li
+            key={o.id}
+            // on phones the pairs stack, so a rule and the block number show where one pair ends
+            className="grid gap-2 border-t border-slate-200 pt-4 first:border-t-0 first:pt-0 md:grid-cols-2 md:gap-4 md:border-t-0 md:pt-0"
+          >
             <div>
-              <p className="mb-1 text-xs font-semibold text-slate-500 md:hidden">Original — {originalLabel} · {BLOCK_TYPE_LABEL[o.type]}</p>
+              <p className="mb-1 text-xs font-semibold text-slate-500 md:hidden">{i + 1}. Original — {originalLabel} · {BLOCK_TYPE_LABEL[o.type]}</p>
               <BlockField block={o} readOnly label={`Original block ${i + 1}`} />
             </div>
             <div>

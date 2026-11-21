@@ -139,7 +139,7 @@ export default function Review() {
                 {i + 1}. {BLOCK_TYPE_LABEL[b.type]}
                 {isNonText(b) && ' (not text — shown as a placeholder in the PDF)'}
               </p>
-              <BlockField block={b} onChange={(t) => edit(i, t)} />
+              <BlockField block={b} onChange={(t) => edit(i, t)} label={`Block ${i + 1}: ${BLOCK_TYPE_LABEL[b.type]}`} />
             </Card>
           </li>
         ))}

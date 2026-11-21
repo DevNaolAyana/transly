@@ -22,12 +22,12 @@ export default function Landing() {
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Link
             to={user ? '/upload' : '/register'}
-            className="rounded-lg bg-white px-5 py-3 text-center font-semibold text-brand-900 hover:bg-brand-50"
+            className="rounded-lg bg-white px-5 py-3 text-center font-semibold text-brand-900 hover:bg-brand-50 focus-visible:outline-white"
           >
             {user ? 'Translate a document' : 'Create a free account'}
           </Link>
           {!user && (
-            <Link to="/login" className="rounded-lg border border-white/50 px-5 py-3 text-center font-semibold hover:bg-white/10">
+            <Link to="/login" className="rounded-lg border border-white/50 px-5 py-3 text-center font-semibold hover:bg-white/10 focus-visible:outline-white">
               Sign in
             </Link>
           )}

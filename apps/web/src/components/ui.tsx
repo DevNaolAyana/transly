@@ -3,10 +3,11 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost'
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-700 disabled:bg-slate-300',
-  secondary: 'bg-white text-slate-800 border border-slate-300 hover:bg-slate-50 disabled:text-slate-400',
-  danger: 'bg-red-600 text-white hover:bg-red-700 disabled:bg-slate-300',
-  ghost: 'text-brand-700 hover:bg-brand-50 disabled:text-slate-400',
+  // disabled: grey on light grey stays readable (white on slate-300 was about 1.5:1)
+  primary: 'bg-brand-600 text-white hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-500',
+  secondary: 'bg-white text-slate-800 border border-slate-300 hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-500',
+  danger: 'bg-red-600 text-white hover:bg-red-700 disabled:bg-slate-200 disabled:text-slate-500',
+  ghost: 'text-brand-700 hover:bg-brand-50 disabled:text-slate-500',
 }
 
 export function Button({
@@ -98,6 +99,7 @@ export function StepBar({ step }: { step: 1 | 2 | 3 | 4 }) {
       {steps.map((s, i) => (
         <li
           key={s}
+          aria-current={i + 1 === step ? 'step' : undefined}
           className={`flex flex-1 items-center justify-center rounded-full px-2 py-1 text-center leading-tight ${
             i + 1 === step ? 'bg-brand-600 font-semibold text-white' : i + 1 < step ? 'bg-brand-100 text-brand-900' : 'bg-slate-200 text-slate-600'
           }`}

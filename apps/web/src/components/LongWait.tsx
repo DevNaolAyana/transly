@@ -15,11 +15,14 @@ export function LongWait({ message }: { message: string }) {
   }, [])
   return (
     <Card className="text-center">
-      <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 py-6 text-slate-700">
+      <div aria-busy="true" className="flex flex-col items-center gap-3 py-6 text-slate-700">
         <Spinner className="h-8 w-8 text-brand-600" />
-        <p className="font-semibold">{message}</p>
-        <p className="text-sm text-slate-500" data-testid="elapsed">Waiting for {secs} s</p>
-        {secs >= 45 && <p className="text-sm text-amber-800">Still working. Please keep this page open.</p>}
+        {/* Only the message is live: the counter would otherwise be read out every second. */}
+        <div role="status" className="space-y-3">
+          <p className="font-semibold">{message}</p>
+          {secs >= 45 && <p className="text-sm text-amber-800">Still working. Please keep this page open.</p>}
+        </div>
+        <p className="text-sm text-slate-500" data-testid="elapsed" aria-hidden="true">Waiting for {secs} s</p>
       </div>
     </Card>
   )
