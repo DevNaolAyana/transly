@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Noto Sans Ethiopic";
+  src: url("/fonts/NotoSansEthiopic-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Noto Sans Ethiopic";
+  src: url("/fonts/NotoSansEthiopic-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "Noto Sans Ethiopic", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-600: #0f7a4f;
+  --color-brand-700: #0b6140;
+  --color-brand-900: #063d28;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+/* One visible keyboard focus style for links and buttons (inputs keep their own ring). In the base layer so a
+   utility such as focus-visible:outline-white can still override it on dark backgrounds. */
+@layer base {
+  a:focus-visible,
+  button:focus-visible {
+    outline: 3px solid var(--color-brand-600);
+    outline-offset: 2px;
+  }
+}
+
+.preview-watermark {
+  /* tiled red "PREVIEW" so it stays visible however long the page is */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='220'><text x='160' y='120' text-anchor='middle' font-family='sans-serif' font-size='44' font-weight='800' letter-spacing='6' fill='rgb(220,38,38)' fill-opacity='0.13' transform='rotate(-25 160 110)'>PREVIEW</text></svg>");
+  background-repeat: repeat;
+}
+@media print {
+  .no-print { display: none !important; }
+}
