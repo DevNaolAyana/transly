@@ -1,0 +1,181 @@
+import { useCallback, useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Alert, Button, Card, PageLoading, StepBar } from '../components/ui'
+import { SideBySide } from '../components/SideBySide'
+import { checkTranslated, loadDraft, sameBlocks, saveDraft } from '../lib/draft'
+import { langLabel } from '../lib/constants'
+import { api } from '../services/api'
+import { errMsg } from '../services/errors'
+import type { Block, DocumentRecord } from '../types'
+
+type Phase = 'loading' | 'translating' | 'ready' | 'error'
+
+export default function Translate() {
+  const { id = '' } = useParams()
+  const nav = useNavigate()
+  const [doc, setDoc] = useState<DocumentRecord | null>(null)
+  const [original, setOriginal] = useState<Block[]>([])
+  const [translated, setTranslated] = useState<Block[]>([])
+  const [phase, setPhase] = useState<Phase>('loading')
+  const [error, setError] = useState<string | null>(null)
+  const [reviewBusy, setReviewBusy] = useState(false)
+  const [reviewError, setReviewError] = useState<string | null>(null)
+
+  const translateNow = useCallback(
+    async (d: DocumentRecord, src: Block[]) => {
+      setPhase('translating')
+      setError(null)
+      try {
+        const res = await api.translate({
+          documentId: id,
+          sourceLanguage: d.sourceLang,
+          targetLanguage: d.targetLang,
+          blocks: src,
+        })
+        const problem = checkTranslated(src, res.blocks)
+        if (problem) throw new Error(problem)
+        setTranslated(res.blocks)
+        saveDraft(id, { translated: res.blocks, translatedSource: src })
+        setPhase('ready')
+      } catch (e) {
+        setError(errMsg(e))
+        setPhase('error')
+      }
+    },
+    [id],
+  )
+
+  const init = useCallback(async () => {
+    setPhase('loading')
+    setError(null)
+    try {
+      const d = await api.getDocument(id)
+      setDoc(d)
+      const draft = loadDraft(id)
+      const src = draft.original ?? d.blocksOriginal
+      if (!src || src.length === 0) {
+        nav(`/documents/${id}/review`, { replace: true })
+        return
+      }
+      setOriginal(src)
+      if (draft.translated && sameBlocks(draft.translatedSource, src)) {
+        setTranslated(draft.translated)
+        setPhase('ready')
+      } else if (!draft.original && d.blocksTranslated && !checkTranslated(src, d.blocksTranslated)) {
+        setTranslated(d.blocksTranslated)
+        setPhase('ready')
+      } else {
+        await translateNow(d, src)
+      }
+    } catch (e) {
+      setError(errMsg(e))
+      setPhase('error')
+    }
+  }, [id, nav, translateNow])
+
+  useEffect(() => {
+    void init()
+  }, [init])
+
+  function edit(i: number, text: string) {
+    setTranslated((prev) => {
+      const next = prev.map((b, j) => (j === i ? { ...b, text } : b))
+      saveDraft(id, { translated: next })
+      return next
+    })
+  }
+
+  async function sendForReview() {
+    setReviewBusy(true)
+    setReviewError(null)
+    try {
+      await api.requestHumanReview({ documentId: id, blocksOriginal: original, blocksTranslated: translated })
+      nav('/documents')
+    } catch (e) {
+      setReviewError(errMsg(e))
+      setReviewBusy(false)
+    }
+  }
+
+  if (phase === 'loading') return <PageLoading label="Loading…" />
+  if (phase === 'translating') {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <StepBar step={3} />
+        <PageLoading label="Translating… this can take up to a minute." />
+      </div>
+    )
+  }
+  if (phase === 'error' || !doc) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-3">
+        <StepBar step={3} />
+        <Alert
+          tone="error"
+          title="Translation failed"
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => void init()}>Try again</Button>
+              <Link to={`/documents/${id}/review`} className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold">Back to the text</Link>
+            </div>
+          }
+        >
+          {error}
+        </Alert>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <StepBar step={3} />
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-bold">Translation</h1>
+          <p className="text-sm text-slate-600">{langLabel(doc.sourceLang)} → {langLabel(doc.targetLang)}</p>
+        </div>
+        <div className="flex gap-2">
+          <Link to={`/documents/${id}/review`} className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold">
+            ← Edit original text
+          </Link>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              if (confirm('Translate again? Your edits to the translation will be replaced.')) void translateNow(doc, original)
+            }}
+          >
+            Re-translate
+          </Button>
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <Alert tone="warn" title="PREVIEW — not issued yet">
+          This is a machine translation draft. It has no QR code and cannot be verified until you issue it. Read it carefully and edit anything that is wrong.
+        </Alert>
+      </div>
+
+      <SideBySide
+        original={original}
+        translated={translated}
+        onEdit={edit}
+        originalLabel={langLabel(doc.sourceLang)}
+        translatedLabel={langLabel(doc.targetLang)}
+        preview
+      />
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <Card>
+          <h2 className="font-bold">Option: human review</h2>
+          <p className="mb-3 mt-1 text-sm text-slate-600">A human translator checks the translation and issues the final PDF with their name on it.</p>
+          {reviewError && <div className="mb-3"><Alert tone="error" title="Could not send for review">{reviewError}</Alert></div>}
+          <Button variant="secondary" loading={reviewBusy} onClick={() => void sendForReview()}>Send to a human translator</Button>
+        </Card>
+        <Card>
+          <h2 className="font-bold">Payment</h2>
+          <p className="mt-1 text-sm text-slate-600">Payments are not set up yet. (Placeholder — nothing is charged.)</p>
+        </Card>
+      </div>
+    </div>
+  )
+}
