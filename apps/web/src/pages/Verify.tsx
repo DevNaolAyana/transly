@@ -6,7 +6,7 @@ import { ShareButtons, usePdfActions } from '../components/PdfActions'
 import { docTypeLabel, langLabel } from '../lib/constants'
 import { verifyUrl } from '../lib/links'
 import { api } from '../services/api'
-import type { VerifyResponse } from '../types'
+import type { VerifyResponse } from '@shared/contract'
 
 const BANNER = {
   valid: { cls: 'border-emerald-500 bg-emerald-50 text-emerald-900', icon: '✔', title: 'Valid', text: 'This document was issued through Transly and has not been revoked.' },

@@ -1,6 +1,7 @@
 import type { Api } from './api'
 import { ApiError } from './errors'
-import type { Block, DocumentRecord, Role, VerifyResponse } from '../types'
+import type { ApiError as ApiErrorBody, Block, VerifyResponse } from '@shared/contract'
+import type { DocumentRecord, Role } from '../types'
 
 /**
  * MOCK backend (VITE_USE_MOCKS=true). Everything here is fake sample data kept in
@@ -13,14 +14,16 @@ import type { Block, DocumentRecord, Role, VerifyResponse } from '../types'
  * Verify triggers: id "revoked-demo" -> revoked, id "missing-demo" -> not_found.
  */
 
-const FAILURES: Record<string, { status: number; code: string; msg: string; once?: boolean }> = {
+// Error codes are limited to the ones in shared/contract.ts (ApiError.error.code).
+type ErrCode = ApiErrorBody['error']['code']
+const FAILURES: Record<string, { status: number; code: ErrCode; msg: string; once?: boolean }> = {
   fail: { status: 503, code: 'INTERNAL', msg: 'Mock server failure', once: true },
   rate: { status: 429, code: 'RATE_LIMITED', msg: 'Mock rate limit', once: true },
   down: { status: 500, code: 'INTERNAL', msg: 'Mock server is down' },
   lang: { status: 422, code: 'UNSUPPORTED_LANGUAGE', msg: 'Mock unsupported language' },
   auth: { status: 401, code: 'UNAUTHORIZED', msg: 'Mock invalid token' },
   big: { status: 413, code: 'PAYLOAD_TOO_LARGE', msg: 'Mock payload too large' },
-  bad: { status: 422, code: 'UNPROCESSABLE', msg: 'Mock: the document could not be processed' },
+  bad: { status: 422, code: 'BAD_REQUEST', msg: 'Mock: the document could not be processed' },
 }
 // key -> time of the first failure. Calls within 500 ms count as the same attempt (React StrictMode runs effects twice in dev).
 const failedOnce = new Map<string, number>()
@@ -166,7 +169,7 @@ export const mockApi: Api = {
   async getDocument(id) {
     await wait(150)
     const d = load().docs[id]
-    if (!d) throw new ApiError('Document not found (mock).', 404)
+    if (!d) throw new ApiError('Document not found (mock).', 404, 'NOT_FOUND')
     return d
   },
 
@@ -198,7 +201,7 @@ export const mockApi: Api = {
     await wait(1200)
     const db = load()
     const d = db.docs[documentId]
-    if (!d) throw new ApiError('Document not found (mock).', 404)
+    if (!d) throw new ApiError('Document not found (mock).', 404, 'NOT_FOUND')
     maybeFail(d, 'extract')
     const lang = sourceLanguage ?? d.sourceLang
     const blocks = lang === 'en' ? SAMPLE_EN : SAMPLE_AM
@@ -212,7 +215,7 @@ export const mockApi: Api = {
     await wait(1400)
     const db = load()
     const d = db.docs[documentId]
-    if (!d) throw new ApiError('Document not found (mock).', 404)
+    if (!d) throw new ApiError('Document not found (mock).', 404, 'NOT_FOUND')
     maybeFail(d, 'translate')
     const out: Block[] = blocks.map((b) =>
       ['stamp', 'signature', 'logo', 'handwriting'].includes(b.type) || !b.text.trim()
@@ -230,9 +233,9 @@ export const mockApi: Api = {
     await wait(500)
     const db = load()
     const d = db.docs[documentId]
-    if (!d) throw new ApiError('Document not found (mock).', 404)
+    if (!d) throw new ApiError('Document not found (mock).', 404, 'NOT_FOUND')
     if (d.ownerId !== mockCurrentUserId()) throw new ApiError('Only the owner can request a review (mock).', 403, 'FORBIDDEN')
-    if (!d.blocksTranslated) throw new ApiError('Translate the document before requesting a review (mock).', 422, 'NOT_TRANSLATED')
+    if (!d.blocksTranslated) throw new ApiError('Translate the document before requesting a review (mock).', 422, 'BAD_REQUEST')
     // Like the real endpoint (body is only { documentId }): the status changes, the stored blocks are NOT replaced
     // by any edits the user made in the browser.
     d.status = 'in_review'
@@ -249,7 +252,7 @@ export const mockApi: Api = {
     if (!d || d.ownerId !== mockCurrentUserId()) {
       throw new ApiError('Only the owner of the document can revoke it (mock).', 403, 'FORBIDDEN')
     }
-    if (rec.status === 'revoked') throw new ApiError('This document is already revoked (mock).', 409, 'ALREADY_REVOKED')
+    if (rec.status === 'revoked') throw new ApiError('This document is already revoked (mock).', 409, 'BAD_REQUEST')
     rec.status = 'revoked'
     save(db)
     return { result: 'revoked' }
@@ -259,14 +262,17 @@ export const mockApi: Api = {
     await wait(400)
     const db = load()
     const d = db.docs[p.documentId]
-    if (!d) throw new ApiError('Document not found (mock).', 404)
+    if (!d) throw new ApiError('Document not found (mock).', 404, 'NOT_FOUND')
     maybeFail(d, 'reserve')
+    // Contract: 'human_reviewed' is accepted only for a translator profile, otherwise forced to 'machine'.
+    const role = await mockApi.getMyRole()
+    const reviewStatus = p.reviewStatus === 'human_reviewed' && role === 'translator' ? 'human_reviewed' : 'machine'
     const verificationId = hex(16)
     db.issued[verificationId] = {
       verificationId,
       documentId: p.documentId,
       issuerName: p.issuerName,
-      reviewStatus: p.reviewStatus,
+      reviewStatus,
       isPublic: p.isPublic,
       status: 'reserved',
     }
@@ -278,7 +284,7 @@ export const mockApi: Api = {
     await wait(500)
     const db = load()
     const rec = db.issued[verificationId]
-    if (!rec) throw new ApiError('Unknown verification id (mock).', 404)
+    if (!rec) throw new ApiError('Unknown verification id (mock).', 404, 'NOT_FOUND')
     maybeFail(db.docs[rec.documentId], 'complete')
     if (pdfBase64.length > 4_500_000) throw new ApiError('Mock: request body too large (Vercel limit ~4.5 MB).', 413, 'PAYLOAD_TOO_LARGE')
     const bytes = Uint8Array.from(atob(pdfBase64), (c) => c.charCodeAt(0))

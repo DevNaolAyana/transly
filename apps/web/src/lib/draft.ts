@@ -1,4 +1,4 @@
-import type { Block } from '../types'
+import type { Block } from '@shared/contract'
 
 /** Unsaved edits live in sessionStorage per document (the API has no endpoint to save drafts). */
 export interface Draft {

@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Alert, Button, Card, Field, inputCls } from './ui'
 import { ErrorNotice } from './ErrorNotice'
 import { IssueError, issueDocument, rememberIssued, type IssueStage } from '../lib/issue'
-import type { Block, DocumentRecord, ReviewStatus } from '../types'
+import type { Block, ReviewStatus } from '@shared/contract'
+import type { DocumentRecord } from '../types'
 
 const STAGE_TEXT: Record<IssueStage, string> = {
   reserve: 'Reserving the verification ID…',

@@ -1,5 +1,5 @@
 import { BLOCK_TYPE_LABEL } from '../lib/constants'
-import type { Block } from '../types'
+import type { Block } from '@shared/contract'
 import { BlockField } from './BlockEditor'
 
 /** Original (read-only) next to translation (editable). Stacks on phones. */

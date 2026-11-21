@@ -8,7 +8,7 @@ import { api } from '../services/api'
 import { errMsg } from '../services/errors'
 import { useAuth } from '../context/AuthContext'
 import { ShareButtons, usePdfActions } from '../components/PdfActions'
-import type { VerifyResult } from '../types'
+import type { VerifyResult } from '@shared/contract'
 
 export default function Issued() {
   const { verificationId = '' } = useParams()

@@ -7,7 +7,8 @@ import { ErrorNotice } from '../components/ErrorNotice'
 import { checkTranslated, loadDraft, sameBlocks, saveDraft } from '../lib/draft'
 import { langLabel } from '../lib/constants'
 import { api } from '../services/api'
-import type { Block, DocumentRecord } from '../types'
+import type { Block } from '@shared/contract'
+import type { DocumentRecord } from '../types'
 
 type Phase = 'loading' | 'translating' | 'ready' | 'error'
 

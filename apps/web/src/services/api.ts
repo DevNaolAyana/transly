@@ -3,21 +3,26 @@ import { USE_MOCKS } from '../lib/constants'
 import { mockApi } from './mockApi'
 import { ApiError } from './errors'
 import type {
+  ApiError as ApiErrorBody,
   Block,
-  CompleteResponse,
-  DbDocStatus,
+  DocStatus,
   DocType,
-  DocumentRecord,
+  ExtractRequest,
   ExtractResponse,
+  IssueCompleteRequest,
+  IssueCompleteResponse,
+  IssueReserveRequest,
+  IssueReserveResponse,
   LangCode,
-  ReserveRequest,
-  ReserveResponse,
+  ReviewRequestBody,
   ReviewRequestResponse,
+  RevokeRequest,
   RevokeResponse,
-  Role,
+  TranslateRequest,
   TranslateResponse,
   VerifyResponse,
-} from '../types'
+} from '@shared/contract'
+import type { DocumentRecord, Role } from '../types'
 
 export { ApiError }
 
@@ -38,14 +43,9 @@ export interface Api {
   getMyRole(): Promise<Role>
   // --- backend API (see shared/contract.ts) ---
   extract(documentId: string, sourceLanguage?: LangCode): Promise<ExtractResponse>
-  translate(p: {
-    documentId: string
-    sourceLanguage: LangCode
-    targetLanguage: LangCode
-    blocks: Block[]
-  }): Promise<TranslateResponse>
-  reserveIssue(p: ReserveRequest): Promise<ReserveResponse>
-  completeIssue(p: { verificationId: string; pdfBase64: string }): Promise<CompleteResponse>
+  translate(p: TranslateRequest): Promise<TranslateResponse>
+  reserveIssue(p: IssueReserveRequest): Promise<IssueReserveResponse>
+  completeIssue(p: IssueCompleteRequest): Promise<IssueCompleteResponse>
   verify(verificationId: string): Promise<VerifyResponse>
   /** POST /api/review/request { documentId } -> { status: 'in_review' } */
   requestHumanReview(documentId: string): Promise<ReviewRequestResponse>
@@ -88,9 +88,9 @@ async function request<T>(
     /* non-JSON body */
   }
   if (!res.ok && !acceptStatuses.includes(res.status)) {
-    // Backend format: { error: { code, message } }. Also tolerate { error: "text" } / { message }.
-    const o = json as { error?: unknown; message?: unknown } | null
-    const eo = o?.error && typeof o.error === 'object' ? (o.error as { code?: unknown; message?: unknown }) : null
+    // Backend format (shared/contract.ts ApiError): { error: { code, message } }. Also tolerate { error: "text" } / { message }.
+    const o = json as Partial<ApiErrorBody> & { error?: unknown; message?: unknown } | null
+    const eo = o?.error && typeof o.error === 'object' ? (o.error as Partial<ApiErrorBody['error']>) : null
     const code = typeof eo?.code === 'string' ? eo.code : undefined
     const msg =
       (typeof eo?.message === 'string' && eo.message) ||
@@ -110,7 +110,7 @@ interface DocRow {
   source_lang: LangCode
   target_lang: LangCode
   doc_type: DocType | null
-  status: DbDocStatus
+  status: DocStatus
   blocks_original: Block[] | null
   blocks_translated: Block[] | null
   created_at: string
@@ -203,14 +203,16 @@ const realApi: Api = {
     return (data?.role as Role | undefined) ?? 'customer'
   },
 
-  extract: (documentId, sourceLanguage) =>
-    request<ExtractResponse>('POST', '/api/extract', { body: { documentId, sourceLanguage } }),
+  extract: (documentId, sourceLanguage) => {
+    const body: ExtractRequest = { documentId, sourceLanguage }
+    return request<ExtractResponse>('POST', '/api/extract', { body })
+  },
 
   translate: (p) => request<TranslateResponse>('POST', '/api/translate', { body: p }),
 
-  reserveIssue: (p) => request<ReserveResponse>('POST', '/api/issue/reserve', { body: p }),
+  reserveIssue: (p) => request<IssueReserveResponse>('POST', '/api/issue/reserve', { body: p }),
 
-  completeIssue: (p) => request<CompleteResponse>('POST', '/api/issue/complete', { body: p }),
+  completeIssue: (p) => request<IssueCompleteResponse>('POST', '/api/issue/complete', { body: p }),
 
   async verify(id) {
     const r = await request<VerifyResponse>('GET', `/api/verify/${encodeURIComponent(id)}`, {
@@ -224,13 +226,15 @@ const realApi: Api = {
   },
 
   async requestHumanReview(documentId) {
-    const r = await request<ReviewRequestResponse>('POST', '/api/review/request', { body: { documentId } })
+    const body: ReviewRequestBody = { documentId } // contract v2: documentId only, no translatorId
+    const r = await request<ReviewRequestResponse>('POST', '/api/review/request', { body })
     if (r?.status !== 'in_review') throw new ApiError('The server did not confirm that the document is in review.')
     return r
   },
 
   async revokeDocument(verificationId) {
-    const r = await request<RevokeResponse>('POST', '/api/issue/revoke', { body: { verificationId } })
+    const body: RevokeRequest = { verificationId }
+    const r = await request<RevokeResponse>('POST', '/api/issue/revoke', { body })
     if (r?.result !== 'revoked') throw new ApiError('The server did not confirm the revocation.')
     return r
   },

@@ -1,4 +1,4 @@
-import type { BlockType, DocType, LangCode } from '../types'
+import type { BlockType, DocType, LangCode } from '@shared/contract'
 
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true'
 

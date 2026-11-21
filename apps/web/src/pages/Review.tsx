@@ -6,7 +6,8 @@ import { BlockField, hasUnclear, isNonText } from '../components/BlockEditor'
 import { BLOCK_TYPE_LABEL, docTypeLabel, langLabel } from '../lib/constants'
 import { loadDraft, saveDraft } from '../lib/draft'
 import { api } from '../services/api'
-import type { Block, DocumentRecord, ExtractResponse } from '../types'
+import type { Block, ExtractResponse } from '@shared/contract'
+import type { DocumentRecord } from '../types'
 
 type Phase = 'loading' | 'extracting' | 'ready' | 'error'
 

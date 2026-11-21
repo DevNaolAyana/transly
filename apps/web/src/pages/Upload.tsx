@@ -5,7 +5,7 @@ import { ErrorNotice } from '../components/ErrorNotice'
 import { DOC_TYPES, LANGUAGES } from '../lib/constants'
 import { validateFile, type FileKind } from '../lib/validateFile'
 import { api } from '../services/api'
-import type { DocType, LangCode } from '../types'
+import type { DocType, LangCode } from '@shared/contract'
 
 export default function Upload() {
   const nav = useNavigate()

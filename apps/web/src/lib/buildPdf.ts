@@ -3,7 +3,7 @@ import QRCode from 'qrcode'
 import { NON_TEXT_PLACEHOLDER, langLabel, docTypeLabel } from './constants'
 import { verifyUrl } from './links'
 import { createPdfWithFonts, drawLine, measure, wrapText, type PdfFonts } from './pdfText'
-import type { Block, DocType, LangCode, ReviewStatus } from '../types'
+import type { Block, DocType, LangCode, ReviewStatus } from '@shared/contract'
 
 export interface BuildPdfInput {
   documentId: string

@@ -1,6 +1,6 @@
 import { api } from '../services/api'
 import { ApiError } from '../services/errors'
-import type { Block, DocType, LangCode, ReviewStatus } from '../types'
+import type { Block, DocType, LangCode, ReviewStatus } from '@shared/contract'
 
 export type IssueStage = 'reserve' | 'build' | 'complete'
 

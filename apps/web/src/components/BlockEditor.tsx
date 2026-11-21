@@ -1,5 +1,5 @@
 import { BLOCK_TYPE_LABEL, NON_TEXT_PLACEHOLDER, NON_TEXT_TYPES } from '../lib/constants'
-import type { Block } from '../types'
+import type { Block } from '@shared/contract'
 
 export const UNCLEAR = '[unclear]'
 export const hasUnclear = (t: string) => t.toLowerCase().includes(UNCLEAR)
