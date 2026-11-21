@@ -354,6 +354,26 @@ export const mockApi: Api = {
       pdfUrl: rec.isPublic ? rec.pdfDataUrl : undefined,
     }
   },
+
+  async initPayment(documentId) {
+    await wait(300)
+    const db = load()
+    const d = db.docs[documentId]
+    if (!d) throw new ApiError('Document not found (mock).', 404, 'NOT_FOUND')
+    const txRef = `mock-tx-${Date.now()}-${hex(6)}`
+    const amountEtb = Number(import.meta.env.VITE_DEMO_PRICE_ETB) || 100
+    const checkoutUrl = `${window.location.origin}/documents/${documentId}/translate?txRef=${encodeURIComponent(txRef)}&status=success`
+    return { checkoutUrl, txRef, amountEtb }
+  },
+
+  async verifyPayment(txRef) {
+    await wait(300)
+    // If txRef contains "fail", simulate failed payment verification
+    if (txRef.includes('fail')) {
+      return { paid: false }
+    }
+    return { paid: true }
+  },
 }
 
 // Same client timeout as the real API (whose fetch is aborted), so a "hang" file shows the timeout message.

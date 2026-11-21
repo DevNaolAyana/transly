@@ -28,6 +28,7 @@ export function IssuePanel({
   defaultName = '',
   nameLabel = 'Issuer name',
   intro,
+  disabled = false,
 }: {
   doc: DocumentRecord
   blocks: Block[]
@@ -37,6 +38,7 @@ export function IssuePanel({
   defaultName?: string
   nameLabel?: string
   intro?: string
+  disabled?: boolean
 }) {
   const nav = useNavigate()
   const { user } = useAuth()
@@ -111,7 +113,7 @@ export function IssuePanel({
         )}
         {busy && stage && <Alert tone="info">{STAGE_TEXT[stage]}</Alert>}
 
-        <Button type="submit" className="w-full" loading={busy} disabled={!name.trim()}>
+        <Button type="submit" className="w-full" loading={busy} disabled={disabled || !name.trim()}>
           {submitLabel}
         </Button>
       </form>

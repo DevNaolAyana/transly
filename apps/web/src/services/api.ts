@@ -14,6 +14,10 @@ import type {
   IssueReserveRequest,
   IssueReserveResponse,
   LangCode,
+  PaymentInitRequest,
+  PaymentInitResponse,
+  PaymentVerifyRequest,
+  PaymentVerifyResponse,
   ReviewRequestBody,
   ReviewRequestResponse,
   RevokeRequest,
@@ -51,6 +55,10 @@ export interface Api {
   requestHumanReview(documentId: string): Promise<ReviewRequestResponse>
   /** POST /api/issue/revoke { verificationId } -> { result: 'revoked' } (owner only; the API enforces it) */
   revokeDocument(verificationId: string): Promise<RevokeResponse>
+  /** POST /api/payment/init { documentId } -> { checkoutUrl, txRef, amountEtb } */
+  initPayment(documentId: string): Promise<PaymentInitResponse>
+  /** POST /api/payment/verify { txRef } -> { paid } */
+  verifyPayment(txRef: string): Promise<PaymentVerifyResponse>
 }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +130,7 @@ interface DocRow {
   blocks_original: Block[] | null
   blocks_translated: Block[] | null
   created_at: string
+  paid?: boolean | null
 }
 
 const rowToDoc = (r: DocRow): DocumentRecord => ({
@@ -135,6 +144,7 @@ const rowToDoc = (r: DocRow): DocumentRecord => ({
   blocksOriginal: r.blocks_original,
   blocksTranslated: r.blocks_translated,
   createdAt: r.created_at,
+  paid: Boolean(r.paid),
 })
 
 const safeName = (n: string) => n.replace(/[^\w.\-]+/g, '_').slice(-80) || 'file'
@@ -245,6 +255,16 @@ const realApi: Api = {
     const r = await request<RevokeResponse>('POST', '/api/issue/revoke', { body })
     if (r?.result !== 'revoked') throw new ApiError('The server did not confirm the revocation.')
     return r
+  },
+
+  initPayment: (documentId) => {
+    const body: PaymentInitRequest = { documentId }
+    return request<PaymentInitResponse>('POST', '/api/payment/init', { body })
+  },
+
+  verifyPayment: (txRef) => {
+    const body: PaymentVerifyRequest = { txRef }
+    return request<PaymentVerifyResponse>('POST', '/api/payment/verify', { body })
   },
 }
 

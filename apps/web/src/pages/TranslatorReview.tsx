@@ -62,6 +62,8 @@ export default function TranslatorReview() {
         onEdit={(i, text) => setTranslated((p) => p.map((b, j) => (j === i ? { ...b, text } : b)))}
         originalLabel={langLabel(doc.sourceLang)}
         translatedLabel={langLabel(doc.targetLang)}
+        sourceLang={doc.sourceLang}
+        targetLang={doc.targetLang}
         preview
       />
       <IssuePanel

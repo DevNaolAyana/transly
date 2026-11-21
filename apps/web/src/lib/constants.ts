@@ -1,6 +1,8 @@
 import type { BlockType, DocType, LangCode } from '@shared/contract'
 
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true'
+export const DEMO_PRICE_ETB = Number(import.meta.env.VITE_DEMO_PRICE_ETB) || 100
+export const REQUIRE_PAYMENT = import.meta.env.VITE_REQUIRE_PAYMENT === 'true'
 
 export const LANGUAGES: { code: LangCode; label: string; native: string }[] = [
   { code: 'om', label: 'Afaan Oromo', native: 'Afaan Oromoo' },

@@ -14,6 +14,7 @@ export interface DocumentRecord {
   blocksOriginal: Block[] | null
   blocksTranslated: Block[] | null
   createdAt: string
+  paid?: boolean
 }
 
 export type Role = 'customer' | 'translator'
