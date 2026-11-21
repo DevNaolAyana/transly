@@ -43,6 +43,7 @@ const MIME: Record<string, string> = {
 const SAMPLES_DIR = 'test-samples';
 const OUT_DIR = path.join(SAMPLES_DIR, 'out');
 const PREVIEW_LINES = 15;
+const REQUEST_TIMEOUT_MS = 120_000;
 
 function fail(message: string): never {
   console.error(`ERROR: ${message}`);
@@ -138,7 +139,8 @@ async function main(): Promise<void> {
   console.log(`model:  ${model}`);
   console.log(`sample: ${samplePath} (${mimeType}, ${(bytes.length / 1024).toFixed(0)} KB)`);
 
-  const ai = new GoogleGenAI({ apiKey });
+  // Without a timeout a 503 from an overloaded model can hang for minutes.
+  const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: REQUEST_TIMEOUT_MS } });
   const config = { temperature: 0, responseMimeType: 'application/json' };
 
   // ---- extract -----------------------------------------------------------
